@@ -9,10 +9,11 @@ Resources using Conditions.
 
 # Resources
 The entities that we want to check. Should handle various resources, eg.
-* file last modified date
+* file (general) - last modified date, file size etc.
+* file (text) - nth row contains value, number of rows etc.
 * sql query results: column value in nth row in mth datatable
 * return values of executables
-* file contents
+* file (excel)
 * web service calls
 * date of the last modified file in a folder
 
