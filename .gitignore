@@ -1,0 +1,7 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/HealthcheckDashboard/.vs/HealthcheckDashboard/v15
+/HealthcheckDashboard/obj/Debug
