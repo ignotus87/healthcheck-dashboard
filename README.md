@@ -19,7 +19,7 @@ The entities that we want to check. Should handle various resources, eg.
 
 # Tasks
 Tasks have a Schedule and a ReturnedValue. 
-The Schedule tells when to ferform the check.
+The Schedule tells when to perform the check.
 The ReturnedValue has the last result, that is the subjet of conditions.
 ReturnValues have types and should also have extensible converters
 
