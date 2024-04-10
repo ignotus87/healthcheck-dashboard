@@ -1,22 +1,28 @@
 ﻿using System;
 using System.IO;
+using HealthcheckDashboard.ResourceNS;
 
-namespace HealthcheckDashboard.Task
+namespace HealthcheckDashboard.TaskNS
 {
     class GetFileLastModifiedDateTask : ITask
     {
-        private string _filePath;
+        private GeneralFileResource GeneralFileResource { get; }
 
         public DateTime LastModifiedDate { get; private set; }
 
-        public GetFileLastModifiedDateTask(string filePath)
+        public GetFileLastModifiedDateTask(GeneralFileResource generalFileResource)
         {
-            _filePath = filePath;
+            GeneralFileResource = generalFileResource;
         }
 
         public void Perform()
         {
-            LastModifiedDate = File.GetLastWriteTime(_filePath);
+            LastModifiedDate = File.GetLastWriteTime(GeneralFileResource.FilePath);
+        }
+
+        public override string ToString()
+        {
+            return nameof(GetFileLastModifiedDateTask);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace HealthcheckDashboard.Resource
+﻿namespace HealthcheckDashboard.ResourceNS
 {
     enum ResourceType
     {

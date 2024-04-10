@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace HealthcheckDashboard.Schedule
+namespace HealthcheckDashboard.ScheduleNS
 {
-    class Schedule
+    public class Schedule
     {
         public TimeSpan TimeSpan { get; private set; }
 

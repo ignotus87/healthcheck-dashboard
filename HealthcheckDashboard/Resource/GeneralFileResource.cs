@@ -1,12 +1,17 @@
-﻿namespace HealthcheckDashboard.Resource
+﻿namespace HealthcheckDashboard.ResourceNS
 {
     class GeneralFileResource : Resource
     {
-        private string _filePath;
+        public string FilePath { get; }
 
         public GeneralFileResource(string filePath) : base(ResourceType.GeneralFile)
         {
-            _filePath = filePath;
+            FilePath = filePath;
+        }
+
+        public override string ToString()
+        {
+            return nameof(GeneralFileResource) + ": " + FilePath;
         }
     }
 }
