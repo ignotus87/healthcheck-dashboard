@@ -12,7 +12,8 @@
       },
       "condition": {
         "conditionType": "DateTimeNotOlderThanTimeSpanCondition",
-        "notOlderThanSeconds": 60
+        "notOlderThanSeconds": 60,
+        "warnWhen": "becomesFalse"
       }
     }
   ]

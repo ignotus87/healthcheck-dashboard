@@ -96,7 +96,7 @@ namespace HealthcheckDashboard
                                 lock (ConsoleLock)
                                 {
                                     var original = Console.ForegroundColor;
-                                    if (condition != null && !result)
+                                    if (condition != null && !result && condition.WarnWhen == WarnWhen.becomesFalse)
                                     {
                                         Console.ForegroundColor = ConsoleColor.Red;
                                     }
@@ -176,7 +176,15 @@ namespace HealthcheckDashboard
             {
                 case "DateTimeNotOlderThanTimeSpanCondition":
                     var notOlderSeconds = conditionElement.TryGetProperty("notOlderThanSeconds", out var s) ? s.GetInt32() : 60;
-                    return new DateTimeNotOlderThanTimeSpanCondition(TimeSpan.FromSeconds(notOlderSeconds));
+
+                    // parse optional warnWhen setting from JSON (default: becomesFalse)
+                    WarnWhen warnWhen = WarnWhen.becomesFalse;
+                    if (conditionElement.TryGetProperty("warnWhen", out var w) && w.ValueKind == JsonValueKind.String)
+                    {
+                        Enum.TryParse<WarnWhen>(w.GetString(), ignoreCase: true, out warnWhen);
+                    }
+
+                    return new DateTimeNotOlderThanTimeSpanCondition(TimeSpan.FromSeconds(notOlderSeconds), warnWhen);
                 default:
                     throw new NotSupportedException($"Condition type not supported: {conditionType}");
             }
