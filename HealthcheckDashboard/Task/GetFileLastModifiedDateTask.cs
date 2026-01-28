@@ -1,6 +1,8 @@
-﻿using System;
-using System.IO;
+﻿using HealthcheckDashboard.ConditionNS;
 using HealthcheckDashboard.ResourceNS;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace HealthcheckDashboard.TaskNS
 {
@@ -18,6 +20,7 @@ namespace HealthcheckDashboard.TaskNS
         public void Perform()
         {
             LastModifiedDate = File.GetLastWriteTime(GeneralFileResource.FilePath);
+            Console.Out.WriteLineAsync($"[{nameof(GetFileLastModifiedDateTask)}] LastModifiedDate is {LastModifiedDate}");
         }
 
         public override string ToString()

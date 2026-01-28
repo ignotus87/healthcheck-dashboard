@@ -1,0 +1,19 @@
+{
+  "tasks": [
+    {
+      "name": "Check temp file freshness",
+      "taskType": "GetFileLastModifiedDateTask",
+      "resource": {
+        "resourceType": "GeneralFileResource",
+        "filePath": "C:\\tmp\\testfile.txt"
+      },
+      "schedule": {
+        "intervalSeconds": 600
+      },
+      "condition": {
+        "conditionType": "DateTimeNotOlderThanTimeSpanCondition",
+        "notOlderThanSeconds": 60
+      }
+    }
+  ]
+}
