@@ -7,7 +7,8 @@
         ExcelFile,
         SqlQuery,
         WebServiceCall,
-        Folder
+        Folder,
+        Url
     }
     class Resource
     {

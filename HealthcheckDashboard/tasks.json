@@ -15,6 +15,22 @@
         "notOlderThanSeconds": 60,
         "warnWhen": "becomesFalse"
       }
+    },
+    {
+      "name": "Track web request result change",
+      "taskType": "MakeWebRequestTask",
+      "resource": {
+        "resourceType": "UrlResource",
+        "url": "https://arveres.mbvk.hu/publicapi/auction/list?offset=0&limit=10&sortMod=feltolt&sortDirection=desc&phaseCode=folyamatos_ingatlan&postalCode=2730"
+      },
+      "schedule": {
+        "intervalSeconds": 600
+      },
+      "condition": {
+        "conditionType": "ContentIsDifferentCondition",
+        "contentFilePath": "C:\\work\\HealthcheckDashboard\\Mbvk2730Result.txt",
+        "warnWhen": "becomesTrue"
+      }
     }
   ]
 }

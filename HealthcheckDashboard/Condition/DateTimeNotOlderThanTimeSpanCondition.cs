@@ -19,6 +19,14 @@ namespace HealthcheckDashboard.ConditionNS
             return parameter >= ActualValue;
         }
 
+        // explicit non-generic implementation forwards to typed method
+        bool ICondition.EvaluateCondition(object parameter)
+        {
+            if (parameter is DateTime dt)
+                return EvaluateCondition(dt);
+            throw new ArgumentException($"Expected parameter of type {nameof(DateTime)}");
+        }
+
         public override string ToString()
         {
             return nameof(DateTimeNotOlderThanTimeSpanCondition)

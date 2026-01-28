@@ -77,7 +77,7 @@ namespace HealthcheckDashboard
                     var schedule = new Schedule(TimeSpan.FromSeconds(intervalSeconds));
 
                     // Create condition (optional)
-                    ICondition<DateTime> condition = null;
+                    ICondition condition = null;
                     if (taskConfig.TryGetProperty("condition", out var conditionElement))
                     {
                         condition = CreateCondition(conditionElement);
@@ -92,6 +92,8 @@ namespace HealthcheckDashboard
                     var localTask = task;
                     var localResource = resource;
                     var localCondition = condition;
+                    bool? conditionResult = null;
+                    string message;
 
                     // Start background runner for this configured task (runs immediately once, then according to schedule)
                     var bgTask = RunInBackground(schedule.TimeSpan, () =>
@@ -104,60 +106,64 @@ namespace HealthcheckDashboard
                             if (localTask is GetFileLastModifiedDateTask gf)
                             {
                                 var value = gf.LastModifiedDate;
-                                var result = localCondition != null ? localCondition.EvaluateCondition(value) : false;
-                                var message = $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}\nValue: {value}\nCondition: {localCondition}\nResult: {result}";
-
-                                // determine whether a transition occurred that requires a warning
-                                var prevOpt = LastConditionResults.TryGetValue(myId, out var prev) ? prev : null;
-                                var warningNeeded = false;
-                                if (localCondition != null && prevOpt.HasValue)
-                                {
-                                    switch (localCondition.WarnWhen)
-                                    {
-                                        case WarnWhen.becomesTrue:
-                                            if (!prevOpt.Value && result) warningNeeded = true;
-                                            break;
-                                        case WarnWhen.becomesFalse:
-                                            if (prevOpt.Value && !result) warningNeeded = true;
-                                            break;
-                                        case WarnWhen.changes:
-                                            if (prevOpt.Value != result) warningNeeded = true;
-                                            break;
-                                    }
-                                }
-
-                                // update stored last result
-                                LastConditionResults[myId] = result;
-
-                                // write message; color red if result is false OR if a warning is required.
-                                lock (ConsoleLock)
-                                {
-                                    var original = Console.ForegroundColor;
-                                    var shouldColorRed = (localCondition != null && !result) || warningNeeded;
-                                    if (shouldColorRed)
-                                    {
-                                        Console.ForegroundColor = ConsoleColor.Red;
-                                    }
-
-                                    // atomic write
-                                    Console.WriteLine(message);
-
-                                    if (warningNeeded)
-                                    {
-                                        Console.WriteLine("!!!! Warning !!!!");
-                                    }
-
-                                    Console.ForegroundColor = original;
-                                }
+                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                                message = $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}\nValue: {value}\nCondition: {localCondition}\nResult: {conditionResult}";
+                            }
+                            else if (localTask is MakeWebRequestTask requestTask)
+                            {
+                                var value = requestTask.LastResult.Length;
+                                var conditionResult = localCondition.EvaluateCondition(requestTask.LastResult);
+                                message = $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}\nValue: {value} chars long\nCondition: {localCondition}\nResult: {conditionResult}";
                             }
                             else
                             {
                                 // generic fallback
-                                lock (ConsoleLock)
+                                message = "Fell back to the generic fallback implementation." + $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}";
+                            }
+
+                            // determine whether a transition occurred that requires a warning
+                            var prevOpt = LastConditionResults.TryGetValue(myId, out var prev) ? prev : null;
+                            var warningNeeded = false;
+                            if (localCondition != null && prevOpt.HasValue)
+                            {
+                                switch (localCondition.WarnWhen)
                                 {
-                                    Console.WriteLine($"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}");
+                                    case WarnWhen.becomesTrue:
+                                        if (!prevOpt.Value && conditionResult.HasValue && conditionResult.Value) warningNeeded = true;
+                                        break;
+                                    case WarnWhen.becomesFalse:
+                                        if (prevOpt.Value && conditionResult.HasValue && !conditionResult.Value) warningNeeded = true;
+                                        break;
+                                    case WarnWhen.changes:
+                                        if (prevOpt.Value != conditionResult) warningNeeded = true;
+                                        break;
                                 }
                             }
+
+                            // update stored last result
+                            LastConditionResults[myId] = conditionResult;
+
+                            // write message; color red if result is false OR if a warning is required.
+                            lock (ConsoleLock)
+                            {
+                                var original = Console.ForegroundColor;
+                                var shouldColorRed = (localCondition != null && conditionResult.HasValue && !conditionResult.Value) || warningNeeded;
+                                if (shouldColorRed)
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Red;
+                                }
+
+                                // atomic write
+                                Console.WriteLine(message);
+
+                                if (warningNeeded)
+                                {
+                                    Console.WriteLine("!!!! Warning !!!!");
+                                }
+
+                                Console.ForegroundColor = original;
+                            }
+
                         }
                         catch (Exception ex)
                         {
@@ -194,6 +200,9 @@ namespace HealthcheckDashboard
                 case "GeneralFileResource":
                     var filePath = resourceElement.GetProperty("filePath").GetString();
                     return new GeneralFileResource(filePath);
+                case "UrlResource":
+                    var url = resourceElement.GetProperty("url").GetString();
+                    return new UrlResource(url);
                 default:
                     throw new NotSupportedException($"Resource type not supported: {resourceType}");
             }
@@ -207,27 +216,52 @@ namespace HealthcheckDashboard
                     if (resource is GeneralFileResource gfr)
                         return new GetFileLastModifiedDateTask(gfr);
                     throw new ArgumentException("GetFileLastModifiedDateTask requires a GeneralFileResource");
+                case "MakeWebRequestTask":
+                    if (resource is UrlResource ur)
+                        return new MakeWebRequestTask(ur);
+                    throw new ArgumentException("MakeWebRequestTask requires a UrlResource");
                 default:
                     throw new NotSupportedException($"Task type not supported: {taskType}");
             }
         }
 
-        private static ICondition<DateTime> CreateCondition(JsonElement conditionElement)
+        private static ICondition CreateCondition(JsonElement conditionElement)
         {
             var conditionType = conditionElement.GetProperty("conditionType").GetString();
+            WarnWhen warnWhen;
+
             switch (conditionType)
             {
                 case "DateTimeNotOlderThanTimeSpanCondition":
                     var notOlderSeconds = conditionElement.TryGetProperty("notOlderThanSeconds", out var s) ? s.GetInt32() : 60;
 
                     // parse optional warnWhen setting from JSON (default: becomesFalse)
-                    WarnWhen warnWhen = WarnWhen.becomesFalse;
-                    if (conditionElement.TryGetProperty("warnWhen", out var w) && w.ValueKind == JsonValueKind.String)
+                    warnWhen = WarnWhen.becomesFalse;
                     {
-                        Enum.TryParse<WarnWhen>(w.GetString(), ignoreCase: true, out warnWhen);
+                        if (conditionElement.TryGetProperty("warnWhen", out var w) && w.ValueKind == JsonValueKind.String)
+                        {
+                            Enum.TryParse<WarnWhen>(w.GetString(), ignoreCase: true, out warnWhen);
+                        }
                     }
 
                     return new DateTimeNotOlderThanTimeSpanCondition(TimeSpan.FromSeconds(notOlderSeconds), warnWhen);
+
+                case "ContentIsDifferentCondition":
+
+                    var contentFilePath = conditionElement.TryGetProperty("contentFilePath", out var cfp) && cfp.ValueKind == JsonValueKind.String
+                        ? cfp.GetString()
+                        : null;
+
+                    // parse optional warnWhen setting from JSON (default: becomesFalse)
+                    warnWhen = WarnWhen.becomesFalse;
+                    {
+                        if (conditionElement.TryGetProperty("warnWhen", out var w) && w.ValueKind == JsonValueKind.String)
+                        {
+                            Enum.TryParse<WarnWhen>(w.GetString(), ignoreCase: true, out warnWhen);
+                        }
+                    }
+
+                    return new ContentIsDifferentCondition(contentFilePath, warnWhen);
                 default:
                     throw new NotSupportedException($"Condition type not supported: {conditionType}");
             }
