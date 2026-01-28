@@ -13,7 +13,7 @@
       "condition": {
         "conditionType": "DateTimeNotOlderThanTimeSpanCondition",
         "notOlderThanSeconds": 60,
-        "warnWhen": "becomesFalse"
+        "warnWhen": false
       }
     },
     {
@@ -29,7 +29,7 @@
       "condition": {
         "conditionType": "ContentIsDifferentCondition",
         "contentFilePath": "C:\\work\\HealthcheckDashboard\\Mbvk2730Result.txt",
-        "warnWhen": "becomesTrue"
+        "warnWhen": true
       }
     }
   ]

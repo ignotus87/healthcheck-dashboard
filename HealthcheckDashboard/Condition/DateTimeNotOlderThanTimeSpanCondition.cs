@@ -6,9 +6,9 @@ namespace HealthcheckDashboard.ConditionNS
     {
         public TimeSpan NotOlderThanTimespan { get; }
         public DateTime ActualValue => DateTime.Now.AddTicks(-NotOlderThanTimespan.Ticks);
-        public WarnWhen WarnWhen { get; }
+        public bool WarnWhen { get; }
 
-        public DateTimeNotOlderThanTimeSpanCondition(TimeSpan notOlderThanTimespan, WarnWhen warnWhen = WarnWhen.becomesFalse)
+        public DateTimeNotOlderThanTimeSpanCondition(TimeSpan notOlderThanTimespan, bool warnWhen)
         {
             NotOlderThanTimespan = notOlderThanTimespan;
             WarnWhen = warnWhen;

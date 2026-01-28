@@ -103,17 +103,24 @@ namespace HealthcheckDashboard
                         {
                             localTask.Perform();
 
+                            bool foundTask = false;
+
                             if (localTask is GetFileLastModifiedDateTask gf)
                             {
+                                foundTask = true;
                                 var value = gf.LastModifiedDate;
                                 conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
-                                message = $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}\nValue: {value}\nCondition: {localCondition}\nResult: {conditionResult}";
                             }
                             else if (localTask is MakeWebRequestTask requestTask)
                             {
+                                foundTask = true;
                                 var value = requestTask.LastResult.Length;
                                 var conditionResult = localCondition.EvaluateCondition(requestTask.LastResult);
-                                message = $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}\nValue: {value} chars long\nCondition: {localCondition}\nResult: {conditionResult}";
+                            }
+
+                            if (foundTask)
+                            {
+                                message = $"[{localTaskName}] Performed Task: {localTask}\nCondition: {localCondition}";
                             }
                             else
                             {
@@ -126,18 +133,7 @@ namespace HealthcheckDashboard
                             var warningNeeded = false;
                             if (localCondition != null && prevOpt.HasValue)
                             {
-                                switch (localCondition.WarnWhen)
-                                {
-                                    case WarnWhen.becomesTrue:
-                                        if (!prevOpt.Value && conditionResult.HasValue && conditionResult.Value) warningNeeded = true;
-                                        break;
-                                    case WarnWhen.becomesFalse:
-                                        if (prevOpt.Value && conditionResult.HasValue && !conditionResult.Value) warningNeeded = true;
-                                        break;
-                                    case WarnWhen.changes:
-                                        if (prevOpt.Value != conditionResult) warningNeeded = true;
-                                        break;
-                                }
+                                warningNeeded = prevOpt.Value != conditionResult.Value;
                             }
 
                             // update stored last result
@@ -228,21 +224,28 @@ namespace HealthcheckDashboard
         private static ICondition CreateCondition(JsonElement conditionElement)
         {
             var conditionType = conditionElement.GetProperty("conditionType").GetString();
-            WarnWhen warnWhen;
+            bool warnWhen;
+
+            // parse warnWhen setting from JSON
+            {
+                if (conditionElement.TryGetProperty("warnWhen", out var wt) && wt.ValueKind == JsonValueKind.True)
+                {
+                    warnWhen = true;
+                }
+                else if (conditionElement.TryGetProperty("warnWhen", out var wf) && wf.ValueKind == JsonValueKind.False)
+                {
+                    warnWhen = false;
+                }
+                else
+                {
+                    throw new ConfigurationException("WarnWhen setting is required for all tasks!");
+                }
+            }
 
             switch (conditionType)
             {
                 case "DateTimeNotOlderThanTimeSpanCondition":
                     var notOlderSeconds = conditionElement.TryGetProperty("notOlderThanSeconds", out var s) ? s.GetInt32() : 60;
-
-                    // parse optional warnWhen setting from JSON (default: becomesFalse)
-                    warnWhen = WarnWhen.becomesFalse;
-                    {
-                        if (conditionElement.TryGetProperty("warnWhen", out var w) && w.ValueKind == JsonValueKind.String)
-                        {
-                            Enum.TryParse<WarnWhen>(w.GetString(), ignoreCase: true, out warnWhen);
-                        }
-                    }
 
                     return new DateTimeNotOlderThanTimeSpanCondition(TimeSpan.FromSeconds(notOlderSeconds), warnWhen);
 
@@ -251,15 +254,6 @@ namespace HealthcheckDashboard
                     var contentFilePath = conditionElement.TryGetProperty("contentFilePath", out var cfp) && cfp.ValueKind == JsonValueKind.String
                         ? cfp.GetString()
                         : null;
-
-                    // parse optional warnWhen setting from JSON (default: becomesFalse)
-                    warnWhen = WarnWhen.becomesFalse;
-                    {
-                        if (conditionElement.TryGetProperty("warnWhen", out var w) && w.ValueKind == JsonValueKind.String)
-                        {
-                            Enum.TryParse<WarnWhen>(w.GetString(), ignoreCase: true, out warnWhen);
-                        }
-                    }
 
                     return new ContentIsDifferentCondition(contentFilePath, warnWhen);
                 default:

@@ -25,7 +25,7 @@ namespace HealthcheckDashboard.TaskNS
 
         public override string ToString()
         {
-            return nameof(GetFileLastModifiedDateTask);
+            return nameof(GetFileLastModifiedDateTask) + $": {LastModifiedDate}";
         }
     }
 }

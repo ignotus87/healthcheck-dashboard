@@ -7,19 +7,12 @@ namespace HealthcheckDashboard.ConditionNS
     {
         // Evaluate with a runtime object (implementations should cast to their expected type)
         bool EvaluateCondition(object parameter);
-        WarnWhen WarnWhen { get; }
+        bool WarnWhen { get; }
     }
 
     // Generic convenience interface for typed conditions
     public interface ICondition<T> : ICondition where T : struct
     {
         bool EvaluateCondition(T parameter);
-    }
-
-    public enum WarnWhen
-    {
-        becomesTrue,
-        becomesFalse,
-        changes
     }
 }
