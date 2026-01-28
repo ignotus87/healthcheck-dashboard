@@ -78,7 +78,7 @@ namespace HealthcheckDashboard
                         condition = CreateCondition(conditionElement);
                     }
 
-                    // Start background runner for this configured task
+                    // Start background runner for this configured task (runs immediately once, then according to schedule)
                     var bgTask = RunInBackground(schedule.TimeSpan, () =>
                     {
                         // run the configured task and evaluate condition if provided
@@ -110,12 +110,21 @@ namespace HealthcheckDashboard
                             else
                             {
                                 // generic fallback
-                                Console.Out.WriteLineAsync($"[{taskName}] Performed Task: {task}\nResource: {resource}");
+                                lock (ConsoleLock)
+                                {
+                                    Console.WriteLine($"[{taskName}] Performed Task: {task}\nResource: {resource}");
+                                }
                             }
                         }
                         catch (Exception ex)
                         {
-                            Console.Error.WriteLineAsync($"[{taskName}] Task execution error: {ex}");
+                            lock (ConsoleLock)
+                            {
+                                var original = Console.ForegroundColor;
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine($"[{taskName}] Task execution error: {ex}");
+                                Console.ForegroundColor = original;
+                            }
                         }
                     });
 
@@ -173,13 +182,48 @@ namespace HealthcheckDashboard
             }
         }
 
-        public static async Task RunInBackground(TimeSpan timeSpan, Action action)
+        // Runs action immediately once (on a background thread) and then schedules subsequent runs using PeriodicTimer.
+        // Returns a Task that represents the long-running background runner.
+        public static Task RunInBackground(TimeSpan timeSpan, Action action)
         {
-            var periodicTimer = new PeriodicTimer(timeSpan);
-            while (await periodicTimer.WaitForNextTickAsync())
+            return Task.Run(async () =>
             {
-                action();
-            }
+                // Initial immediate run
+                try
+                {
+                    action();
+                }
+                catch (Exception ex)
+                {
+                    lock (ConsoleLock)
+                    {
+                        var original = Console.ForegroundColor;
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"[RunInBackground] Initial run error: {ex}");
+                        Console.ForegroundColor = original;
+                    }
+                }
+
+                // Schedule subsequent runs
+                using var periodicTimer = new PeriodicTimer(timeSpan);
+                while (await periodicTimer.WaitForNextTickAsync())
+                {
+                    try
+                    {
+                        action();
+                    }
+                    catch (Exception ex)
+                    {
+                        lock (ConsoleLock)
+                        {
+                            var original = Console.ForegroundColor;
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"[RunInBackground] Scheduled run error: {ex}");
+                            Console.ForegroundColor = original;
+                        }
+                    }
+                }
+            });
         }
     }
 }
