@@ -5,7 +5,7 @@
       "taskType": "GetFileLastModifiedDateTask",
       "resource": {
         "resourceType": "GeneralFileResource",
-        "filePath": "\\\\mehubudkpvc39\\ServiceFilesSAP\\KESZLET.PDF"
+        "filePath": "c:\\tmp\\testfile.txt"
       },
       "schedule": {
         "intervalSeconds": 3600
@@ -28,7 +28,7 @@
       },
       "condition": {
         "conditionType": "ContentIsDifferentCondition",
-        "contentFilePath": "C:\\work\\HealthcheckDashboard\\Mbvk2730Result.txt",
+        "contentFilePath": "C:\\work\\HealthcheckDashboard\\TaskData\\Mbvk2730Result.txt",
         "warnWhen": true
       }
     }

@@ -9,6 +9,7 @@ using HealthcheckDashboard.ConditionNS;
 using HealthcheckDashboard.ResourceNS;
 using HealthcheckDashboard.ScheduleNS;
 using HealthcheckDashboard.TaskNS;
+using System.Windows.Forms;
 
 namespace HealthcheckDashboard
 {
@@ -22,9 +23,24 @@ namespace HealthcheckDashboard
 
         static async Task Main(string[] args)
         {
-            await ConfigureAndRun();
+            try
+            {
+                ConsoleHelper.EnsureConsole();
 
-            await Console.Out.WriteLineAsync("FINISHED");
+                // start notifier early (harmless if already started)
+                DesktopNotifier.Initialize();
+
+                await ConfigureAndRun();
+
+                await Console.Out.WriteLineAsync("FINISHED");
+
+                // allow notifier to finish any queued notifications before exit
+                DesktopNotifier.Shutdown();
+            }
+            finally
+            {
+                ConsoleHelper.ReleaseConsole();
+            }
         }
 
         public static async Task ConfigureAndRun()
@@ -155,6 +171,22 @@ namespace HealthcheckDashboard
                                 }
 
                                 Console.ForegroundColor = original;
+
+                                // Show desktop notification if result is red or a warning transition occurred
+                                if (shouldColorRed)
+                                {
+                                    try
+                                    {
+                                        var title = $"Healthcheck: {localTaskName}";
+                                        var body = localCondition != null ? localCondition.ToString() : "Condition triggered";
+                                        var icon = warningNeeded ? ToolTipIcon.Warning : ToolTipIcon.Error;
+                                        DesktopNotifier.Notify(title, body, icon, 5000);
+                                    }
+                                    catch
+                                    {
+                                        // Do not fail the background runner on notification failure
+                                    }
+                                }
                             }
 
                         }
