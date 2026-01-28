@@ -69,7 +69,8 @@ namespace HealthcheckDashboard
                     var resource = CreateResource(taskConfig.GetProperty("resource"));
 
                     // Create task
-                    var task = CreateTask(taskConfig.GetProperty("taskType").GetString(), resource);
+                    var task = CreateTask(taskConfig.GetProperty("name").GetString(),
+                        taskConfig.GetProperty("taskType").GetString(), resource);
 
                     // Create schedule
                     var scheduleElement = taskConfig.GetProperty("schedule");
@@ -96,12 +97,12 @@ namespace HealthcheckDashboard
                     string message;
 
                     // Start background runner for this configured task (runs immediately once, then according to schedule)
-                    var bgTask = RunInBackground(schedule.TimeSpan, () =>
+                    var bgTask = RunInBackground(schedule.TimeSpan, async () =>
                     {
                         // run the configured task and evaluate condition if provided
                         try
                         {
-                            localTask.Perform();
+                            await localTask.PerformAsync();
 
                             bool foundTask = false;
 
@@ -114,13 +115,12 @@ namespace HealthcheckDashboard
                             else if (localTask is MakeWebRequestTask requestTask)
                             {
                                 foundTask = true;
-                                var value = requestTask.LastResult.Length;
-                                var conditionResult = localCondition.EvaluateCondition(requestTask.LastResult);
+                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(requestTask.LastResult) : false;
                             }
 
                             if (foundTask)
                             {
-                                message = $"[{localTaskName}] Performed Task: {localTask}\nCondition: {localCondition}";
+                                message = $"[{localTaskName}] Performed Task: {localTask}\n=> {localCondition}";
                             }
                             else
                             {
@@ -131,7 +131,7 @@ namespace HealthcheckDashboard
                             // determine whether a transition occurred that requires a warning
                             var prevOpt = LastConditionResults.TryGetValue(myId, out var prev) ? prev : null;
                             var warningNeeded = false;
-                            if (localCondition != null && prevOpt.HasValue)
+                            if (localCondition != null && prevOpt.HasValue && conditionResult.HasValue)
                             {
                                 warningNeeded = prevOpt.Value != conditionResult.Value;
                             }
@@ -143,11 +143,8 @@ namespace HealthcheckDashboard
                             lock (ConsoleLock)
                             {
                                 var original = Console.ForegroundColor;
-                                var shouldColorRed = (localCondition != null && conditionResult.HasValue && !conditionResult.Value) || warningNeeded;
-                                if (shouldColorRed)
-                                {
-                                    Console.ForegroundColor = ConsoleColor.Red;
-                                }
+                                var shouldColorRed = (localCondition != null && conditionResult.HasValue && conditionResult.Value == localCondition.WarnWhen) || warningNeeded;
+                                Console.ForegroundColor = shouldColorRed ? ConsoleColor.Red : ConsoleColor.Green;
 
                                 // atomic write
                                 Console.WriteLine(message);
@@ -204,17 +201,17 @@ namespace HealthcheckDashboard
             }
         }
 
-        private static ITask CreateTask(string taskType, Resource resource)
+        private static ITask CreateTask(string taskName, string taskType, Resource resource)
         {
             switch (taskType)
             {
                 case "GetFileLastModifiedDateTask":
                     if (resource is GeneralFileResource gfr)
-                        return new GetFileLastModifiedDateTask(gfr);
+                        return new GetFileLastModifiedDateTask(taskName, gfr);
                     throw new ArgumentException("GetFileLastModifiedDateTask requires a GeneralFileResource");
                 case "MakeWebRequestTask":
                     if (resource is UrlResource ur)
-                        return new MakeWebRequestTask(ur);
+                        return new MakeWebRequestTask(taskName, ur);
                     throw new ArgumentException("MakeWebRequestTask requires a UrlResource");
                 default:
                     throw new NotSupportedException($"Task type not supported: {taskType}");
@@ -263,14 +260,14 @@ namespace HealthcheckDashboard
 
         // Runs action immediately once (on a background thread) and then schedules subsequent runs using PeriodicTimer.
         // Returns a Task that represents the long-running background runner.
-        public static Task RunInBackground(TimeSpan timeSpan, Action action)
+        public static Task RunInBackground(TimeSpan timeSpan, Func<Task> action)
         {
             return Task.Run(async () =>
             {
                 // Initial immediate run
                 try
                 {
-                    action();
+                    await action();
                 }
                 catch (Exception ex)
                 {
@@ -289,7 +286,7 @@ namespace HealthcheckDashboard
                 {
                     try
                     {
-                        action();
+                        await action();
                     }
                     catch (Exception ex)
                     {

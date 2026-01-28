@@ -2,6 +2,8 @@
 {
     interface ITask
     {
-        void Perform();
+        public string Name { get; }
+
+        System.Threading.Tasks.Task PerformAsync();
     }
 }

@@ -5,26 +5,26 @@
       "taskType": "GetFileLastModifiedDateTask",
       "resource": {
         "resourceType": "GeneralFileResource",
-        "filePath": "C:\\tmp\\testfile.txt"
+        "filePath": "\\\\mehubudkpvc39\\ServiceFilesSAP\\KESZLET.PDF"
       },
       "schedule": {
-        "intervalSeconds": 30
+        "intervalSeconds": 3600
       },
       "condition": {
         "conditionType": "DateTimeNotOlderThanTimeSpanCondition",
-        "notOlderThanSeconds": 60,
+        "notOlderThanSeconds": 7200,
         "warnWhen": false
       }
     },
     {
-      "name": "Track web request result change",
+      "name": "Track MBVK for 2730",
       "taskType": "MakeWebRequestTask",
       "resource": {
         "resourceType": "UrlResource",
-        "url": "https://arveres.mbvk.hu/publicapi/auction/list?offset=0&limit=10&sortMod=feltolt&sortDirection=desc&phaseCode=folyamatos_ingatlan&postalCode=2730"
+        "url": "https://arveres.mbvk.hu/publicapi/auction/list?offset=0&limit=10&sortMod=feltolt&sortDirection=desc&phaseCode=normal_ingatlan_2021&isLive=true&postalCode=2730"
       },
       "schedule": {
-        "intervalSeconds": 600
+        "intervalSeconds": 3600
       },
       "condition": {
         "conditionType": "ContentIsDifferentCondition",

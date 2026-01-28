@@ -6,9 +6,10 @@
 - Store last condition evaluation result per configured task and raise a warning when it changes according to the task's WarnWhen setting (becomesTrue, becomesFalse, changes).
 
 ## Code Style
-- Use specific formatting rules
-- Follow naming conventions
+- Use specific formatting rules.
+- Follow naming conventions.
+- Prefer awaiting async web requests in tasks, such as in MakeWebRequestTask.
 
 ## Project-Specific Rules
-- Custom requirement A
-- Custom requirement B
+- Custom requirement A.
+- Custom requirement B.

@@ -133,9 +133,14 @@ namespace HealthcheckDashboard.ConditionNS
 
         public override string ToString()
         {
-            return nameof(ContentIsDifferentCondition)
-                + ": Content is " + (EvaluationResult ? "different from" : "same as") + " saved value"
-                + (EvaluationResult ? " (FirstDiffAt=" + FirstDiffAt + ")" : "");
+            if (EvaluationResult)
+            {
+                return "Content is different from saved value(FirstDiffAt= " + FirstDiffAt + ")";
+            }
+            else
+            {
+                return "Content is same as saved value.";
+            }
         }
     }
 }

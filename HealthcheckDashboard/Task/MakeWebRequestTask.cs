@@ -1,27 +1,29 @@
 using HealthcheckDashboard.ResourceNS;
 using System;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace HealthcheckDashboard.TaskNS
 {
     class MakeWebRequestTask : ITask
     {
+        public string Name { get; }
         private UrlResource UrlResource { get; }
         public string LastResult { get; private set; }
 
-        public MakeWebRequestTask(UrlResource urlResource)
+        public MakeWebRequestTask(string name, UrlResource urlResource)
         {
+            Name = name;
             UrlResource = urlResource;
         }
 
-        public void Perform()
+        public async Task PerformAsync()
         {
             try
             {
                 using var client = new HttpClient();
-                // synchronous wait is OK here because Perform() runs on a background thread
-                LastResult = client.GetStringAsync(UrlResource.Url).GetAwaiter().GetResult();
-                Console.Out.WriteLineAsync($"[{nameof(MakeWebRequestTask)}] Fetched {UrlResource.Url} (length: {LastResult?.Length ?? 0})");
+                // await the async web request
+                LastResult = await client.GetStringAsync(UrlResource.Url);
             }
             catch (Exception ex)
             {
@@ -32,7 +34,7 @@ namespace HealthcheckDashboard.TaskNS
 
         public override string ToString()
         {
-            return nameof(MakeWebRequestTask);
+            return nameof(MakeWebRequestTask) + " " + Name;
         }
     }
 }
