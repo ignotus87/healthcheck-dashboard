@@ -8,7 +8,7 @@
         "filePath": "C:\\tmp\\testfile.txt"
       },
       "schedule": {
-        "intervalSeconds": 600
+        "intervalSeconds": 30
       },
       "condition": {
         "conditionType": "DateTimeNotOlderThanTimeSpanCondition",

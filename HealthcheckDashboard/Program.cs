@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -15,6 +16,9 @@ namespace HealthcheckDashboard
     {
         // ensure console color changes are atomic across threads
         private static readonly object ConsoleLock = new object();
+
+        // store last condition evaluation per configured task (key = task instance id)
+        private static readonly ConcurrentDictionary<int, bool?> LastConditionResults = new ConcurrentDictionary<int, bool?>();
 
         static async Task Main(string[] args)
         {
@@ -53,6 +57,7 @@ namespace HealthcheckDashboard
             }
 
             var backgroundTasks = new List<Task>();
+            var taskInstanceId = 0;
 
             foreach (var taskConfig in tasksElement.EnumerateArray())
             {
@@ -78,31 +83,69 @@ namespace HealthcheckDashboard
                         condition = CreateCondition(conditionElement);
                     }
 
+                    // assign a stable id for this configured task instance
+                    var myId = Interlocked.Increment(ref taskInstanceId) - 1;
+                    LastConditionResults.TryAdd(myId, null);
+
+                    // capture locals for closure
+                    var localTaskName = taskName;
+                    var localTask = task;
+                    var localResource = resource;
+                    var localCondition = condition;
+
                     // Start background runner for this configured task (runs immediately once, then according to schedule)
                     var bgTask = RunInBackground(schedule.TimeSpan, () =>
                     {
                         // run the configured task and evaluate condition if provided
                         try
                         {
-                            task.Perform();
+                            localTask.Perform();
 
-                            if (task is GetFileLastModifiedDateTask gf)
+                            if (localTask is GetFileLastModifiedDateTask gf)
                             {
                                 var value = gf.LastModifiedDate;
-                                var result = condition != null ? condition.EvaluateCondition(value) : false;
-                                var message = $"[{taskName}] Performed Task: {task}\nResource: {resource}\nValue: {value}\nCondition: {condition}\nResult: {result}";
+                                var result = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                                var message = $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}\nValue: {value}\nCondition: {localCondition}\nResult: {result}";
 
-                                // write message in red if condition exists and is false
+                                // determine whether a transition occurred that requires a warning
+                                var prevOpt = LastConditionResults.TryGetValue(myId, out var prev) ? prev : null;
+                                var warningNeeded = false;
+                                if (localCondition != null && prevOpt.HasValue)
+                                {
+                                    switch (localCondition.WarnWhen)
+                                    {
+                                        case WarnWhen.becomesTrue:
+                                            if (!prevOpt.Value && result) warningNeeded = true;
+                                            break;
+                                        case WarnWhen.becomesFalse:
+                                            if (prevOpt.Value && !result) warningNeeded = true;
+                                            break;
+                                        case WarnWhen.changes:
+                                            if (prevOpt.Value != result) warningNeeded = true;
+                                            break;
+                                    }
+                                }
+
+                                // update stored last result
+                                LastConditionResults[myId] = result;
+
+                                // write message; color red if result is false OR if a warning is required.
                                 lock (ConsoleLock)
                                 {
                                     var original = Console.ForegroundColor;
-                                    if (condition != null && !result && condition.WarnWhen == WarnWhen.becomesFalse)
+                                    var shouldColorRed = (localCondition != null && !result) || warningNeeded;
+                                    if (shouldColorRed)
                                     {
                                         Console.ForegroundColor = ConsoleColor.Red;
                                     }
 
-                                    // use synchronous write so color is applied atomically
+                                    // atomic write
                                     Console.WriteLine(message);
+
+                                    if (warningNeeded)
+                                    {
+                                        Console.WriteLine("!!!! Warning !!!!");
+                                    }
 
                                     Console.ForegroundColor = original;
                                 }
@@ -112,7 +155,7 @@ namespace HealthcheckDashboard
                                 // generic fallback
                                 lock (ConsoleLock)
                                 {
-                                    Console.WriteLine($"[{taskName}] Performed Task: {task}\nResource: {resource}");
+                                    Console.WriteLine($"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}");
                                 }
                             }
                         }
@@ -122,7 +165,7 @@ namespace HealthcheckDashboard
                             {
                                 var original = Console.ForegroundColor;
                                 Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"[{taskName}] Task execution error: {ex}");
+                                Console.WriteLine($"[{localTaskName}] Task execution error: {ex}");
                                 Console.ForegroundColor = original;
                             }
                         }
