@@ -13,6 +13,9 @@ namespace HealthcheckDashboard
 {
     class Program
     {
+        // ensure console color changes are atomic across threads
+        private static readonly object ConsoleLock = new object();
+
         static async Task Main(string[] args)
         {
             await ConfigureAndRun();
@@ -87,7 +90,22 @@ namespace HealthcheckDashboard
                             {
                                 var value = gf.LastModifiedDate;
                                 var result = condition != null ? condition.EvaluateCondition(value) : false;
-                                Console.Out.WriteLineAsync($"[{taskName}] Condition: {condition}\nResult: {result}");
+                                var message = $"[{taskName}] Performed Task: {task}\nResource: {resource}\nValue: {value}\nCondition: {condition}\nResult: {result}";
+
+                                // write message in red if condition exists and is false
+                                lock (ConsoleLock)
+                                {
+                                    var original = Console.ForegroundColor;
+                                    if (condition != null && !result)
+                                    {
+                                        Console.ForegroundColor = ConsoleColor.Red;
+                                    }
+
+                                    // use synchronous write so color is applied atomically
+                                    Console.WriteLine(message);
+
+                                    Console.ForegroundColor = original;
+                                }
                             }
                             else
                             {

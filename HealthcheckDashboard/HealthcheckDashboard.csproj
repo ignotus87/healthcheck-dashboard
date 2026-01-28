@@ -4,6 +4,9 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <None Include=".github\copilot-instructions.md" />
+  </ItemGroup>
+  <ItemGroup>
     <None Update="tasks.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
