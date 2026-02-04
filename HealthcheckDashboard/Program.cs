@@ -133,6 +133,12 @@ namespace HealthcheckDashboard
                                 foundTask = true;
                                 conditionResult = localCondition != null ? localCondition.EvaluateCondition(requestTask.LastResult) : false;
                             }
+                            else if (localTask is SqlQueryDateTimeTask sqlTask)
+                            {
+                                foundTask = true;
+                                var value = sqlTask.LastResult;
+                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                            }
 
                             if (foundTask)
                             {
@@ -228,6 +234,10 @@ namespace HealthcheckDashboard
                 case "UrlResource":
                     var url = resourceElement.GetProperty("url").GetString();
                     return new UrlResource(url);
+                case "ConnectionStringWithQueryResource":
+                    var cs = resourceElement.GetProperty("connectionString").GetString();
+                    var query = resourceElement.GetProperty("query").GetString();
+                    return new ConnectionStringWithQueryResource(cs, query);
                 default:
                     throw new NotSupportedException($"Resource type not supported: {resourceType}");
             }
@@ -245,6 +255,10 @@ namespace HealthcheckDashboard
                     if (resource is UrlResource ur)
                         return new MakeWebRequestTask(taskName, ur);
                     throw new ArgumentException("MakeWebRequestTask requires a UrlResource");
+                case "SqlQueryDateTimeTask":
+                    if (resource is ConnectionStringWithQueryResource csq)
+                        return new SqlQueryDateTimeTask(taskName, csq);
+                    throw new ArgumentException("SqlQueryDateTimeTask requires a ConnectionStringWithQueryResource resource");
                 default:
                     throw new NotSupportedException($"Task type not supported: {taskType}");
             }
@@ -285,6 +299,11 @@ namespace HealthcheckDashboard
                         : null;
 
                     return new ContentIsDifferentCondition(contentFilePath, warnWhen);
+
+                case "SqlQueryResultIsOlderThanCondition":
+                    var limitSeconds = conditionElement.TryGetProperty("limitSeconds", out var l) ? l.GetInt32() : 60;
+                    return new SqlQueryResultIsOlderThanCondition(TimeSpan.FromSeconds(limitSeconds), warnWhen);
+
                 default:
                     throw new NotSupportedException($"Condition type not supported: {conditionType}");
             }

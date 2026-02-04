@@ -31,6 +31,23 @@
         "contentFilePath": "C:\\work\\HealthcheckDashboard\\TaskData\\Mbvk2730Result.txt",
         "warnWhen": true
       }
+    },
+    {
+      "name": "Check fresh LaidBom",
+      "taskType": "SqlQueryDateTimeTask",
+      "resource": {
+        "resourceType": "ConnectionStringWithQueryResource",
+        "connectionString": "Data Source=xxxxxxxxxxxxxxxxxx;Initial Catalog=zzzzzzzzzzzz;Persist Security Info=True;User ID=uuuuuuuuuu;Password=pppppppppppp;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Application Name=HealthcheckDashboard;Command Timeout=100",
+        "query": "select MAX(ValidFrom) as MaxValidFrom from LaidBom"
+      },
+      "schedule": {
+        "intervalSeconds": 3600
+      },
+      "condition": {
+        "conditionType": "SqlQueryResultIsOlderThanCondition",
+        "limitSeconds": 86400,
+        "warnWhen": true
+      }
     }
   ]
 }

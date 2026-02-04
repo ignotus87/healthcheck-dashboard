@@ -8,7 +8,8 @@
         SqlQuery,
         WebServiceCall,
         Folder,
-        Url
+        Url,
+        ConnectionStringWithQuery
     }
     class Resource
     {
