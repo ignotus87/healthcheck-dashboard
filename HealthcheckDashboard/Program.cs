@@ -139,10 +139,16 @@ namespace HealthcheckDashboard
                                 var value = sqlTask.LastResult;
                                 conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
                             }
+                            else if (localTask is SqlQueryIntTask sqlIntTask)
+                            {
+                                foundTask = true;
+                                var value = sqlIntTask.LastResult;
+                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                            }
 
                             if (foundTask)
                             {
-                                message = $"[{localTaskName}] Performed Task: {localTask}\n=> {localCondition}";
+                                message = Environment.NewLine + $"[{localTaskName}] Performed Task: {localTask}\n=> {localCondition}";
                             }
                             else
                             {
@@ -173,7 +179,7 @@ namespace HealthcheckDashboard
 
                                 if (warningNeeded)
                                 {
-                                    Console.WriteLine("!!!! Warning !!!!");
+                                    Console.WriteLine("!!!! Warning !!!! Value changed !!!");
                                 }
 
                                 Console.ForegroundColor = original;
@@ -256,9 +262,17 @@ namespace HealthcheckDashboard
                         return new MakeWebRequestTask(taskName, ur);
                     throw new ArgumentException("MakeWebRequestTask requires a UrlResource");
                 case "SqlQueryDateTimeTask":
-                    if (resource is ConnectionStringWithQueryResource csq)
-                        return new SqlQueryDateTimeTask(taskName, csq);
-                    throw new ArgumentException("SqlQueryDateTimeTask requires a ConnectionStringWithQueryResource resource");
+                    {
+                        if (resource is ConnectionStringWithQueryResource csq)
+                            return new SqlQueryDateTimeTask(taskName, csq);
+                        throw new ArgumentException("SqlQueryDateTimeTask requires a ConnectionStringWithQueryResource resource");
+                    }
+                case "SqlQueryIntTask":
+                    {
+                        if (resource is ConnectionStringWithQueryResource csq)
+                            return new SqlQueryIntTask(taskName, csq);
+                        throw new ArgumentException("SqlQueryIntTask requires a ConnectionStringWithQueryResource resource");
+                    }
                 default:
                     throw new NotSupportedException($"Task type not supported: {taskType}");
             }
@@ -303,6 +317,10 @@ namespace HealthcheckDashboard
                 case "SqlQueryResultIsOlderThanCondition":
                     var limitSeconds = conditionElement.TryGetProperty("limitSeconds", out var l) ? l.GetInt32() : 60;
                     return new SqlQueryResultIsOlderThanCondition(TimeSpan.FromSeconds(limitSeconds), warnWhen);
+
+                case "SqlQueryIntResultIsGreaterThanCondition":
+                    int valueInCondition = conditionElement.TryGetProperty("value", out var v) ? v.GetInt32() : 0;
+                    return new SqlQueryIntResultIsGreaterThanCondition(valueInCondition, warnWhen);
 
                 default:
                     throw new NotSupportedException($"Condition type not supported: {conditionType}");

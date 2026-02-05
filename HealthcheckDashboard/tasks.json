@@ -37,7 +37,7 @@
       "taskType": "SqlQueryDateTimeTask",
       "resource": {
         "resourceType": "ConnectionStringWithQueryResource",
-        "connectionString": "Data Source=xxxxxxxxxxxxxxxxxx;Initial Catalog=zzzzzzzzzzzz;Persist Security Info=True;User ID=uuuuuuuuuu;Password=pppppppppppp;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Application Name=HealthcheckDashboard;Command Timeout=100",
+        "connectionString": "Data Source=xxxxxxxxxxxxxxxxxx;Initial Catalog=zzzzzzzzzzzz;Persist Security Info=True;User ID=uuuuuuuuuu;Password=pppppppppppp;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Application Name=HealthcheckDashboard;Command Timeout=100;Connection Timeout=10",
         "query": "select MAX(ValidFrom) as MaxValidFrom from LaidBom"
       },
       "schedule": {
@@ -46,6 +46,23 @@
       "condition": {
         "conditionType": "SqlQueryResultIsOlderThanCondition",
         "limitSeconds": 86400,
+        "warnWhen": true
+      }
+    },
+    {
+      "name": "Query production records with missing standard time",
+      "taskType": "SqlQueryIntTask",
+      "resource": {
+        "resourceType": "ConnectionStringWithQueryResource",
+        "connectionString": "Data Source=xxxxxxxxxxxxxxxxxx;Initial Catalog=zzzzzzzzzzzz;Persist Security Info=True;User ID=uuuuuuuuuu;Password=pppppppppppp;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Application Name=HealthcheckDashboard;Command Timeout=100;Connection Timeout=10",
+        "query": "select COUNT(*) from Whatever"
+      },
+      "schedule": {
+        "intervalSeconds": 7200
+      },
+      "condition": {
+        "conditionType": "SqlQueryIntResultIsGreaterThanCondition",
+        "value": 0,
         "warnWhen": true
       }
     }
