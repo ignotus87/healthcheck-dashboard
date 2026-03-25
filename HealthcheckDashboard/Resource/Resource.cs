@@ -9,7 +9,8 @@
         WebServiceCall,
         Folder,
         Url,
-        ConnectionStringWithQuery
+        ConnectionStringWithQuery,
+        LatestFile
     }
     class Resource
     {

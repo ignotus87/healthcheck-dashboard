@@ -10,6 +10,7 @@ using HealthcheckDashboard.ResourceNS;
 using HealthcheckDashboard.ScheduleNS;
 using HealthcheckDashboard.TaskNS;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace HealthcheckDashboard
 {
@@ -86,7 +87,7 @@ namespace HealthcheckDashboard
 
                     // Create task
                     var task = CreateTask(taskConfig.GetProperty("name").GetString(),
-                        taskConfig.GetProperty("taskType").GetString(), resource);
+                        taskConfig.GetProperty("taskType").GetString(), resource, taskConfig);
 
                     // Create schedule
                     var scheduleElement = taskConfig.GetProperty("schedule");
@@ -143,6 +144,12 @@ namespace HealthcheckDashboard
                             {
                                 foundTask = true;
                                 var value = sqlIntTask.LastResult;
+                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                            }
+                            else if (localTask is FindLinesInLatestFileContainingErrorTask findErrorTask)
+                            {
+                                foundTask = true;
+                                var value = findErrorTask.LineWithError;
                                 conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
                             }
 
@@ -244,12 +251,15 @@ namespace HealthcheckDashboard
                     var cs = resourceElement.GetProperty("connectionString").GetString();
                     var query = resourceElement.GetProperty("query").GetString();
                     return new ConnectionStringWithQueryResource(cs, query);
+                case "LatestFileResource":
+                    var fileSearchPath = resourceElement.GetProperty("fileSearchPath").GetString();
+                    return new LatestFileResource(fileSearchPath);
                 default:
                     throw new NotSupportedException($"Resource type not supported: {resourceType}");
             }
         }
 
-        private static ITask CreateTask(string taskName, string taskType, Resource resource)
+        private static ITask CreateTask(string taskName, string taskType, Resource resource, JsonElement taskConfigJsonElement)
         {
             switch (taskType)
             {
@@ -273,6 +283,17 @@ namespace HealthcheckDashboard
                             return new SqlQueryIntTask(taskName, csq);
                         throw new ArgumentException("SqlQueryIntTask requires a ConnectionStringWithQueryResource resource");
                     }
+                case "FindLinesInLatestFileContainingErrorTask":
+                    if (resource is LatestFileResource lfr)
+                    {
+                        string[] textPartsIndicatingError = taskConfigJsonElement.TryGetProperty("textPartsIndicatingError", out var cfp) && cfp.ValueKind == JsonValueKind.Array
+                        ? cfp.EnumerateArray().ToArray().Select(x => x.ToString()).ToArray() : new string[] { };
+                        string[] textPartsToExclude = taskConfigJsonElement.TryGetProperty("textPartsToExclude", out var cfp2) && cfp.ValueKind == JsonValueKind.Array
+                        ? cfp2.EnumerateArray().ToArray().Select(x => x.ToString()).ToArray() : new string[] { };
+
+                        return new FindLinesInLatestFileContainingErrorTask(taskName, lfr, textPartsIndicatingError, textPartsToExclude);
+                    }
+                    throw new ArgumentException("FindLinesInLatestFileContainingErrorTask requires a LatestFileResource");
                 default:
                     throw new NotSupportedException($"Task type not supported: {taskType}");
             }
@@ -307,11 +328,9 @@ namespace HealthcheckDashboard
                     return new DateTimeNotOlderThanTimeSpanCondition(TimeSpan.FromSeconds(notOlderSeconds), warnWhen);
 
                 case "ContentIsDifferentCondition":
-
                     var contentFilePath = conditionElement.TryGetProperty("contentFilePath", out var cfp) && cfp.ValueKind == JsonValueKind.String
                         ? cfp.GetString()
                         : null;
-
                     return new ContentIsDifferentCondition(contentFilePath, warnWhen);
 
                 case "SqlQueryResultIsOlderThanCondition":
@@ -321,6 +340,9 @@ namespace HealthcheckDashboard
                 case "SqlQueryIntResultIsGreaterThanCondition":
                     int valueInCondition = conditionElement.TryGetProperty("value", out var v) ? v.GetInt32() : 0;
                     return new SqlQueryIntResultIsGreaterThanCondition(valueInCondition, warnWhen);
+
+                case "StringNotNullCondition":
+                    return new StringNotNullCondition(warnWhen);
 
                 default:
                     throw new NotSupportedException($"Condition type not supported: {conditionType}");
