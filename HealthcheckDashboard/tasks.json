@@ -65,6 +65,28 @@
         "value": 0,
         "warnWhen": true
       }
+    },
+    {
+      "name": "Find log errors",
+      "taskType": "FindLinesInLatestFileContainingErrorTask",
+      "textPartsIndicatingError": [
+        "error",
+        "exception"
+      ],
+      "textPartsToExclude": [
+        "ERROR: no Calculation found for "
+      ],
+      "resource": {
+        "resourceType": "LatestFileResource",
+        "fileSearchPath": "\\\\someServer\\someFolder\\someFile*.txt"
+      },
+      "schedule": {
+        "intervalSeconds": 1800
+      },
+      "condition": {
+        "conditionType": "StringNotNullCondition",
+        "warnWhen": true
+      }
     }
   ]
 }
