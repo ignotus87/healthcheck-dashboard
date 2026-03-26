@@ -24,6 +24,12 @@ namespace HealthcheckDashboard.TaskNS
 
         public async Task PerformAsync()
         {
+            if (LatestFileResource.FilePath == null)
+            {
+                await Console.Out.WriteLineAsync($"No file found to read for {LatestFileResource.FileSearchPath}.");
+                return;
+            }
+
             var allLines = await File.ReadAllLinesAsync(LatestFileResource.FilePath);
 
             LineWithError = allLines.Where(line =>
@@ -33,11 +39,11 @@ namespace HealthcheckDashboard.TaskNS
 
             if (LineWithError == null)
             {
-                await Console.Out.WriteLineAsync("No line containing error found.");
+                await Console.Out.WriteLineAsync($"No line containing error found in file {Path.GetFileName(LatestFileResource.FilePath)}");
             }
             else
             {
-                await Console.Out.WriteLineAsync($"[{nameof(FindLinesInLatestFileContainingErrorTask)}] LineWithError is {LineWithError}");
+                await Console.Out.WriteLineAsync($"[{nameof(FindLinesInLatestFileContainingErrorTask)}] LineWithError is {LineWithError}, in file {Path.GetFileName(LatestFileResource.FilePath)}");
             }
         }
 

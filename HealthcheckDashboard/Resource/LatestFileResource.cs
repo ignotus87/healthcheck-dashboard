@@ -6,23 +6,27 @@ namespace HealthcheckDashboard.ResourceNS
     class LatestFileResource : Resource
     {
         public string FileSearchPath { get; }
-        public string FilePath { get; }
+        public string FilePath
+        {
+            get
+            {
+                if (Directory.GetFiles(Path.GetDirectoryName(FileSearchPath), Path.GetFileName(FileSearchPath))
+                .Select(f => new FileInfo(f))
+                .OrderByDescending(f => f.LastWriteTime)
+                .FirstOrDefault() is FileInfo latestFile)
+                {
+                    return latestFile.FullName;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
 
         public LatestFileResource(string fileSearchPath) : base(ResourceType.LatestFile)
         {
             FileSearchPath = fileSearchPath;
-
-            if (Directory.GetFiles(Path.GetDirectoryName(fileSearchPath), Path.GetFileName(fileSearchPath))
-                .Select(f => new FileInfo(f))
-                .OrderByDescending(f => f.LastWriteTime)
-                .FirstOrDefault() is FileInfo latestFile)
-            {
-                FilePath = latestFile.FullName;
-            }
-            else
-            {
-                throw new FileNotFoundException($"No files found in directory: {fileSearchPath}");
-            }
         }
 
         public override string ToString()
