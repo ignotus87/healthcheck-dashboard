@@ -49,7 +49,7 @@ namespace HealthcheckDashboard.TaskNS
 
         public override string ToString()
         {
-            return nameof(FindLinesInLatestFileContainingErrorTask) + " " + LineWithError + $": {LineWithError}";
+            return nameof(FindLinesInLatestFileContainingErrorTask) + " " + LineWithError + $": {LineWithError} - in file {LatestFileResource.FilePath}";
         }
     }
 }
