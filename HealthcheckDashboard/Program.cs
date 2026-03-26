@@ -197,7 +197,7 @@ namespace HealthcheckDashboard
                                     try
                                     {
                                         var title = $"Healthcheck: {localTaskName}";
-                                        var body = localCondition != null ? localCondition.ToString() : "Condition triggered";
+                                        var body = (localTask.ToString() ?? "") + "|" + localCondition != null ? localCondition.ToString() : "Condition triggered";
                                         var icon = warningNeeded ? ToolTipIcon.Warning : ToolTipIcon.Error;
                                         DesktopNotifier.Notify(title, body, icon, 5000);
                                     }
