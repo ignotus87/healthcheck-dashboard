@@ -31,8 +31,14 @@ namespace HealthcheckDashboard.ConditionNS
 
         bool ICondition.EvaluateCondition(object parameter)
         {
-            if (parameter is string s)
-                return EvaluateCondition(s);
+            if (parameter == null)
+            {
+                return EvaluateCondition(null);
+            }
+            else if (parameter is string s0)
+            {
+                return EvaluateCondition(s0);
+            }
             throw new ArgumentException($"Expected parameter of type {nameof(String)}");
         }
 
