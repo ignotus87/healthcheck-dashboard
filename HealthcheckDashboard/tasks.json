@@ -93,14 +93,14 @@
       "taskType": "SqlQueryDateTimeTask",
       "resource": {
         "resourceType": "ConnectionStringWithQueryResource",
-        "connectionString": "Data Source=xxxxxxxxxxxxxx;Initial Catalog=eDiT_PowerPivot;Persist Security Info=True;User ID=zzzzzzz;Password=ssssssss;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Application Name=HealthcheckDashboard;Command Timeout=100",
+        "connectionString": "Data Source=xxxxxxxxxxxxxx;Initial Catalog=zzzz;Persist Security Info=True;User ID=zzzzzzz;Password=ssssssss;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Application Name=HealthcheckDashboard;Command Timeout=100",
         "query": "select GETUTCDATE() as UtcDate"
       },
       "schedule": {
         "intervalSeconds": 3600
       },
       "condition": {
-        "conditionType": "SqlQueryDateTimeResultIsGreaterThanMillisCondition",
+        "conditionType": "SqlQueryDateTimeResultDiffIsGreaterThanMillisCondition",
         "limitMilliseconds": 100,
         "warnWhen": true
       }

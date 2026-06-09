@@ -343,10 +343,10 @@ namespace HealthcheckDashboard
                         return new SqlQueryIntResultIsGreaterThanCondition(valueInCondition, warnWhen);
                     }
 
-                case "SqlQueryDateTimeResultIsGreaterThanMillisCondition":
+                case nameof(SqlQueryDateTimeResultDiffIsGreaterThanMillisCondition):
                     {
                         int valueInCondition = conditionElement.TryGetProperty("limitMilliseconds", out var v) ? v.GetInt32() : 0;
-                        return new SqlQueryDateTimeResultIsGreaterThanMillisCondition(TimeSpan.FromMilliseconds(valueInCondition), warnWhen);
+                        return new SqlQueryDateTimeResultDiffIsGreaterThanMillisCondition(TimeSpan.FromMilliseconds(valueInCondition), warnWhen);
                     }
 
                 case "StringNotNullCondition":

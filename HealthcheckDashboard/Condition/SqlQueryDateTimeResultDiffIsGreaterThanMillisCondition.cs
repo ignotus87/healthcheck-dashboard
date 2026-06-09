@@ -5,7 +5,7 @@ using System;
 namespace HealthcheckDashboard.ConditionNS
 {
     // Evaluates a DateTime (SQL query result). Returns true when the supplied DateTime is older than the configured timespan.
-    public class SqlQueryDateTimeResultIsGreaterThanMillisCondition : ICondition<DateTime>
+    public class SqlQueryDateTimeResultDiffIsGreaterThanMillisCondition : ICondition<DateTime>
     {
         public TimeSpan LimitTimespan { get; }
         public DateTime CurrentUtcDate => DateTime.UtcNow;
@@ -13,7 +13,7 @@ namespace HealthcheckDashboard.ConditionNS
         public int DiffInMilliseconds;
         public bool EvaluationResult { get; private set; }
 
-        public SqlQueryDateTimeResultIsGreaterThanMillisCondition(TimeSpan limitTimespan, bool warnWhen)
+        public SqlQueryDateTimeResultDiffIsGreaterThanMillisCondition(TimeSpan limitTimespan, bool warnWhen)
         {
             LimitTimespan = limitTimespan;
             WarnWhen = warnWhen;
