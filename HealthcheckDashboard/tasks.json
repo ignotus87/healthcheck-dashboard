@@ -87,6 +87,23 @@
         "conditionType": "StringNotNullCondition",
         "warnWhen": true
       }
+    },
+    {
+      "name": "Check SQL .14 system time",
+      "taskType": "SqlQueryDateTimeTask",
+      "resource": {
+        "resourceType": "ConnectionStringWithQueryResource",
+        "connectionString": "Data Source=xxxxxxxxxxxxxx;Initial Catalog=eDiT_PowerPivot;Persist Security Info=True;User ID=zzzzzzz;Password=ssssssss;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Application Name=HealthcheckDashboard;Command Timeout=100",
+        "query": "select GETUTCDATE() as UtcDate"
+      },
+      "schedule": {
+        "intervalSeconds": 3600
+      },
+      "condition": {
+        "conditionType": "SqlQueryDateTimeResultIsGreaterThanMillisCondition",
+        "limitMilliseconds": 100,
+        "warnWhen": true
+      }
     }
   ]
 }

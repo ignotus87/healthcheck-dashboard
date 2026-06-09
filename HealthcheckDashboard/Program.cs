@@ -338,8 +338,16 @@ namespace HealthcheckDashboard
                     return new SqlQueryResultIsOlderThanCondition(TimeSpan.FromSeconds(limitSeconds), warnWhen);
 
                 case "SqlQueryIntResultIsGreaterThanCondition":
-                    int valueInCondition = conditionElement.TryGetProperty("value", out var v) ? v.GetInt32() : 0;
-                    return new SqlQueryIntResultIsGreaterThanCondition(valueInCondition, warnWhen);
+                    {
+                        int valueInCondition = conditionElement.TryGetProperty("value", out var v) ? v.GetInt32() : 0;
+                        return new SqlQueryIntResultIsGreaterThanCondition(valueInCondition, warnWhen);
+                    }
+
+                case "SqlQueryDateTimeResultIsGreaterThanMillisCondition":
+                    {
+                        int valueInCondition = conditionElement.TryGetProperty("limitMilliseconds", out var v) ? v.GetInt32() : 0;
+                        return new SqlQueryDateTimeResultIsGreaterThanMillisCondition(TimeSpan.FromMilliseconds(valueInCondition), warnWhen);
+                    }
 
                 case "StringNotNullCondition":
                     return new StringNotNullCondition(warnWhen);
