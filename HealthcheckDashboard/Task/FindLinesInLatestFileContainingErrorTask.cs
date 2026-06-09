@@ -9,6 +9,7 @@ namespace HealthcheckDashboard.TaskNS
     class FindLinesInLatestFileContainingErrorTask : ITask
     {
         public string Name { get; }
+        public bool IsEnabled { get; } = true;
         private LatestFileResource LatestFileResource { get; }
         public string LineWithError { get; private set; } = null;
         public string[] TextPartsIndicatingError { get; }

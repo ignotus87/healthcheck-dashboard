@@ -8,6 +8,7 @@ namespace HealthcheckDashboard.TaskNS
     class GetFileLastModifiedDateTask : ITask
     {
         public string Name { get; }
+        public bool IsEnabled { get; } = true;
         private GeneralFileResource GeneralFileResource { get; }
 
         public DateTime LastModifiedDate { get; private set; }

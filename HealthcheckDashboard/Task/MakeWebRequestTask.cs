@@ -8,6 +8,7 @@ namespace HealthcheckDashboard.TaskNS
     class MakeWebRequestTask : ITask
     {
         public string Name { get; }
+        public bool IsEnabled { get; } = true;
         private UrlResource UrlResource { get; }
         public string LastResult { get; private set; }
 

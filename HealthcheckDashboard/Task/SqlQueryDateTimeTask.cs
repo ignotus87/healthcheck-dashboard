@@ -8,6 +8,7 @@ namespace HealthcheckDashboard.TaskNS
     class SqlQueryDateTimeTask : ITask
     {
         public string Name { get; }
+        public bool IsEnabled { get; } = true;
         public ConnectionStringWithQueryResource Resource { get; }
         public DateTime LastResult { get; private set; }
         public override string ToString() => $"SqlQueryDateTimeTask(LastResult={LastResult})";

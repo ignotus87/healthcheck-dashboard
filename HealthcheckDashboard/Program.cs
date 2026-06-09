@@ -81,6 +81,13 @@ namespace HealthcheckDashboard
                 try
                 {
                     var taskName = taskConfig.TryGetProperty("name", out var n) ? n.GetString() : "(unnamed)";
+                    bool isEnabled = taskConfig.TryGetProperty("isEnabled", out var e) && e.ValueKind == JsonValueKind.False ? false : true;
+
+                    if (!isEnabled)
+                    {
+                        await Console.Out.WriteLineAsync($"Skipping disabled task: {taskName}");
+                        continue;
+                    }
 
                     // Create resource
                     var resource = CreateResource(taskConfig.GetProperty("resource"));

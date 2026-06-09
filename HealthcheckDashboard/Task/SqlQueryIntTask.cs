@@ -8,6 +8,7 @@ namespace HealthcheckDashboard.TaskNS
     class SqlQueryIntTask : ITask
     {
         public string Name { get; }
+        public bool IsEnabled { get; } = true;
         public ConnectionStringWithQueryResource Resource { get; }
         public int LastResult { get; private set; }
         public override string ToString() => $"SqlQueryIntTask(LastResult={LastResult})";

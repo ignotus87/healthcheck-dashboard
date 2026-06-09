@@ -90,6 +90,7 @@
     },
     {
       "name": "Check SQL .14 system time",
+      "isEnabled": false,
       "taskType": "SqlQueryDateTimeTask",
       "resource": {
         "resourceType": "ConnectionStringWithQueryResource",
