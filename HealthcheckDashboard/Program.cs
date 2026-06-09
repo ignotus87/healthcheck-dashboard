@@ -165,10 +165,10 @@ namespace HealthcheckDashboard
 
                             // determine whether a transition occurred that requires a warning
                             var prevOpt = LastConditionResults.TryGetValue(myId, out var prev) ? prev : null;
-                            var warningNeeded = false;
+                            var hasValueChanged = false;
                             if (localCondition != null && prevOpt.HasValue && conditionResult.HasValue)
                             {
-                                warningNeeded = prevOpt.Value != conditionResult.Value;
+                                hasValueChanged = prevOpt.Value != conditionResult.Value;
                             }
 
                             // update stored last result
@@ -178,15 +178,15 @@ namespace HealthcheckDashboard
                             lock (ConsoleLock)
                             {
                                 var original = Console.ForegroundColor;
-                                var shouldColorRed = (localCondition != null && conditionResult.HasValue && conditionResult.Value == localCondition.WarnWhen) || warningNeeded;
+                                var shouldColorRed = (localCondition != null && conditionResult.HasValue && conditionResult.Value == localCondition.WarnWhen);
                                 Console.ForegroundColor = shouldColorRed ? ConsoleColor.Red : ConsoleColor.Green;
 
                                 // atomic write
                                 Console.WriteLine(message);
 
-                                if (warningNeeded)
+                                if (hasValueChanged)
                                 {
-                                    Console.WriteLine("!!!! Warning !!!! Value changed !!!");
+                                    Console.WriteLine("Info: Value changed");
                                 }
 
                                 Console.ForegroundColor = original;
@@ -198,7 +198,7 @@ namespace HealthcheckDashboard
                                     {
                                         var title = $"Healthcheck: {localTaskName}";
                                         var body = (localTask.ToString() ?? "") + "|" + localCondition != null ? localCondition.ToString() : "Condition triggered";
-                                        var icon = warningNeeded ? ToolTipIcon.Warning : ToolTipIcon.Error;
+                                        var icon = shouldColorRed ? (hasValueChanged ? ToolTipIcon.Warning : ToolTipIcon.Error) : ToolTipIcon.Info;
                                         DesktopNotifier.Notify(title, body, icon, 5000);
                                     }
                                     catch
