@@ -147,6 +147,12 @@ namespace HealthcheckDashboard
                                 var value = sqlTask.LastResult;
                                 conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
                             }
+                            else if (localTask is SqlGetUtcDateDiffTask sqlGetUtcDateDiffTask)
+                            {
+                                foundTask = true;
+                                var value = (int)Math.Abs(sqlGetUtcDateDiffTask.LastResult.TotalMilliseconds);
+                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                            }
                             else if (localTask is SqlQueryIntTask sqlIntTask)
                             {
                                 foundTask = true;
@@ -254,10 +260,17 @@ namespace HealthcheckDashboard
                 case "UrlResource":
                     var url = resourceElement.GetProperty("url").GetString();
                     return new UrlResource(url);
-                case "ConnectionStringWithQueryResource":
-                    var cs = resourceElement.GetProperty("connectionString").GetString();
-                    var query = resourceElement.GetProperty("query").GetString();
-                    return new ConnectionStringWithQueryResource(cs, query);
+                case nameof(ConnectionStringWithQueryResource):
+                    {
+                        var cs = resourceElement.GetProperty("connectionString").GetString();
+                        var query = resourceElement.GetProperty("query").GetString();
+                        return new ConnectionStringWithQueryResource(cs, query);
+                    }
+                case nameof(ConnectionStringResource):
+                    {
+                        var cs = resourceElement.GetProperty("connectionString").GetString();
+                        return new ConnectionStringResource(cs);
+                    }
                 case "LatestFileResource":
                     var fileSearchPath = resourceElement.GetProperty("fileSearchPath").GetString();
                     return new LatestFileResource(fileSearchPath);
@@ -289,6 +302,12 @@ namespace HealthcheckDashboard
                         if (resource is ConnectionStringWithQueryResource csq)
                             return new SqlQueryIntTask(taskName, csq);
                         throw new ArgumentException("SqlQueryIntTask requires a ConnectionStringWithQueryResource resource");
+                    }
+                case nameof(SqlGetUtcDateDiffTask):
+                    {
+                        if (resource is ConnectionStringResource csr)
+                            return new SqlGetUtcDateDiffTask(taskName, csr);
+                        throw new ArgumentException($"{nameof(SqlGetUtcDateDiffTask)} requires a {nameof(ConnectionStringResource)} resource");
                     }
                 case "FindLinesInLatestFileContainingErrorTask":
                     if (resource is LatestFileResource lfr)
@@ -354,6 +373,12 @@ namespace HealthcheckDashboard
                     {
                         int valueInCondition = conditionElement.TryGetProperty("limitMilliseconds", out var v) ? v.GetInt32() : 0;
                         return new SqlQueryDateTimeResultDiffIsGreaterThanMillisCondition(TimeSpan.FromMilliseconds(valueInCondition), warnWhen);
+                    }
+
+                case nameof(IntIsGreaterThanCondition):
+                    {
+                        int valueInCondition = conditionElement.TryGetProperty("value", out var v) ? v.GetInt32() : 0;
+                        return new IntIsGreaterThanCondition(valueInCondition, warnWhen);
                     }
 
                 case "StringNotNullCondition":

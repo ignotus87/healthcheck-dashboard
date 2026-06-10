@@ -5,21 +5,21 @@ using HealthcheckDashboard.ResourceNS;
 namespace HealthcheckDashboard.TaskNS
 {
     // Executes a SQL query expected to return a single datetime (e.g. "select MAX(ValidFrom) as MaxValidFrom from LaidBom")
-    class SqlQueryDateTimeTask : ITask
+    class SqlGetUtcDateDiffTask : ITask
     {
         public string Name { get; }
         public bool IsEnabled { get; } = true;
-        public ConnectionStringWithQueryResource Resource { get; }
+        public ConnectionStringResource Resource { get; }
         public DateTime SentAtUtc { get; private set; } = DateTime.MinValue;
         public DateTime ReceivedAtUtc { get; private set; } = DateTime.MinValue;
-        public DateTime LastResult { get; private set; }
+        public TimeSpan LastResult { get; private set; }
         public override string ToString() => $"SqlQueryDateTimeTask(LastResult={LastResult})";
 
-        public SqlQueryDateTimeTask(string name, ConnectionStringWithQueryResource resource)
+        public SqlGetUtcDateDiffTask(string name, ConnectionStringResource resource)
         {
             Name = name ?? "(unnamed)";
             Resource = resource ?? throw new ArgumentNullException(nameof(resource));
-            LastResult = DateTime.MinValue;
+            LastResult = TimeSpan.MaxValue;
         }
 
         // Performs the query and stores the resulting DateTime (if any) in LastResult.
@@ -30,7 +30,7 @@ namespace HealthcheckDashboard.TaskNS
             await conn.OpenAsync();
 
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = Resource.Query;
+            cmd.CommandText = "SELECT GETUTCDATE() as UtcDateAtServer";
 
             SentAtUtc = DateTime.UtcNow;
 
@@ -40,21 +40,25 @@ namespace HealthcheckDashboard.TaskNS
 
             if (scalar == null || scalar == DBNull.Value)
             {
-                // No result -> leave LastResult as DateTime.MinValue
+                // No result -> leave LastResult as its preset value (TimeSpan.MaxValue to indicate error)
                 return;
             }
 
             // Try to convert to DateTime
             if (scalar is DateTime dt)
             {
-                LastResult = dt;
+                var dateTimeUtcFromServer = dt;
+                var delayFromQueryToReceive = (ReceivedAtUtc - SentAtUtc) / 2.0;
+                LastResult = dateTimeUtcFromServer + delayFromQueryToReceive - DateTime.UtcNow;
                 return;
             }
 
             // Attempt string parse fallback
             if (DateTime.TryParse(scalar.ToString(), out var parsed))
             {
-                LastResult = parsed;
+                var dateTimeUtcFromServer = parsed;
+                var delayFromQueryToReceive = (ReceivedAtUtc - SentAtUtc) / 2.0;
+                LastResult = dateTimeUtcFromServer + delayFromQueryToReceive - DateTime.UtcNow;
                 return;
             }
 
