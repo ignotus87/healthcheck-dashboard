@@ -55,7 +55,7 @@ namespace HealthcheckDashboard
             };
 
             // List of visible notification windows (managed on UI thread)
-            var openForms = new List<NotificationForm>();
+            var openForms = new List<(NotificationForm Form, DateTime ShownAt, int TimeoutMs)>();
             var margin = 8;
 
             // UI timer polls the queue on the UI thread and creates persistent notification windows.
@@ -83,22 +83,49 @@ namespace HealthcheckDashboard
                         form.FormClosed += (fs, fe) =>
                         {
                             // reposition remaining forms
-                            var idx = openForms.IndexOf(form);
+                            var idx = openForms.FindIndex(t => t.Form == form);
                             if (idx >= 0) openForms.RemoveAt(idx);
                             for (int i = 0; i < openForms.Count; i++)
                             {
-                                var f = openForms[i];
+                                var f = openForms[i].Form;
                                 var newY = wa.Bottom - ((i + 1) * (f.Height + margin));
                                 f.Location = new Point(wa.Right - f.Width - margin, newY);
                             }
                         };
 
-                        openForms.Add(form);
+                        openForms.Add((form, DateTime.UtcNow, n.TimeoutMs));
                         form.Show();
                     }
 
+                    // Close forms that have been open longer than their TimeoutMs
+                    if (openForms.Count > 0)
+                    {
+                        var now = DateTime.UtcNow;
+                        var toClose = new List<NotificationForm>();
+                        foreach (var entry in openForms)
+                        {
+                            if (entry.TimeoutMs > 0 && (now - entry.ShownAt).TotalMilliseconds >= entry.TimeoutMs)
+                            {
+                                toClose.Add(entry.Form);
+                            }
+                        }
+
+                        foreach (var f in toClose)
+                        {
+                            try
+                            {
+                                // Closing triggers FormClosed handler which will remove and reposition remaining forms
+                                f.Close();
+                            }
+                            catch
+                            {
+                                // swallow
+                            }
+                        }
+                    }
+
                     // If queue was marked complete and empty, exit UI thread
-                    if (_queue.IsAddingCompleted && _queue.Count == 0)
+                    if (_queue.IsAddingCompleted && _queue.Count == 0 && openForms.Count == 0)
                     {
                         timer.Stop();
                         Application.ExitThread();

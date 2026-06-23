@@ -212,12 +212,20 @@ namespace HealthcheckDashboard
                                         var title = $"Healthcheck: {localTaskName}";
                                         var body = (localTask.ToString() ?? "") + "|" + localCondition != null ? localCondition.ToString() : "Condition triggered";
                                         var icon = shouldColorRed ? (hasValueChanged ? ToolTipIcon.Warning : ToolTipIcon.Error) : ToolTipIcon.Info;
-                                        DesktopNotifier.Notify(title, body, icon, 5000);
+                                        DesktopNotifier.Notify(title, body, icon, 60000);
                                     }
                                     catch
                                     {
                                         // Do not fail the background runner on notification failure
                                     }
+                                }
+                                else
+                                {
+                                    // Show green notification and close it 10 seconds later
+                                    var title = $"OK: {localTaskName}";
+                                    var body = (localTask.ToString() ?? "") + "|" + localCondition != null ? localCondition.ToString() : "Condition triggered";
+                                    var icon = ToolTipIcon.Info;
+                                    DesktopNotifier.Notify(title, body, icon, 10000);
                                 }
                             }
 
