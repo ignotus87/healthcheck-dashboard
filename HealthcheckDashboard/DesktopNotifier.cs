@@ -54,6 +54,16 @@ namespace HealthcheckDashboard
                 Text = "Healthcheck Dashboard"
             };
 
+            // Create context menu
+            var contextMenu = new ContextMenuStrip();
+            var exitMenuItem = new ToolStripMenuItem("Exit", null, (s, e) =>
+            {
+                notifyIcon.Visible = false;
+                Environment.Exit(0);
+            });
+            contextMenu.Items.Add(exitMenuItem);
+            notifyIcon.ContextMenuStrip = contextMenu;
+
             // List of visible notification windows (managed on UI thread)
             var openForms = new List<(NotificationForm Form, DateTime ShownAt, int TimeoutMs)>();
             var margin = 8;
