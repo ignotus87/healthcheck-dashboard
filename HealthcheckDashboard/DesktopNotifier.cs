@@ -359,6 +359,13 @@ namespace HealthcheckDashboard
                 _textBox.DoubleClick += (s, e) => Close();
                 _iconBox.DoubleClick += (s, e) => Close();
 
+                // Single-click anywhere on the form to open TaskStatusWindow
+                this.Click += (s, e) => OpenTaskStatusWindow();
+                _titleLabel.Click += (s, e) => OpenTaskStatusWindow();
+                _textBox.Click += (s, e) => OpenTaskStatusWindow();
+                _iconBox.Click += (s, e) => OpenTaskStatusWindow();
+
+
                 Controls.Add(_iconBox);
                 Controls.Add(_titleLabel);
                 Controls.Add(_textBox);
@@ -367,6 +374,19 @@ namespace HealthcheckDashboard
                 // set a reasonable default size; caller may adjust
                 Width = 360;
                 Height = PreferredHeight + 8;
+            }
+
+            private void OpenTaskStatusWindow()
+            {
+                var statusWindow = TaskStatusWindow.GetInstance();
+                if (statusWindow.Visibility != System.Windows.Visibility.Visible)
+                {
+                    statusWindow.Show();
+                }
+                else
+                {
+                    statusWindow.Focus();
+                }
             }
         }
     }
