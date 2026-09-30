@@ -134,10 +134,12 @@ namespace HealthcheckDashboard
                     // Start background runner for this configured task (runs immediately once, then according to schedule)
                     var bgTask = RunInBackground(schedule.TimeSpan, async () =>
                     {
+                        var myTask = TaskItems.Single(x => x.Task.Name == localTask.Name);
+
                         // run the configured task and evaluate condition if provided
                         try
                         {
-                            var myTask = TaskItems.Single(x => x.Task.Name == localTask.Name);
+
                             myTask.LastRunTime = DateTime.Now;
                             myTask.NextRunTime = DateTime.Now.Add(schedule.TimeSpan);
 
@@ -185,12 +187,13 @@ namespace HealthcheckDashboard
                             if (foundTask)
                             {
                                 message = Environment.NewLine + $"[{localTaskName}] Performed Task: {localTask}\n=> {localCondition}";
-
+                                myTask.Messages.Add(message);
                             }
                             else
                             {
                                 // generic fallback
                                 message = "Fell back to the generic fallback implementation." + $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}";
+                                myTask.Messages.Add(message);
                             }
 
                             // determine whether a transition occurred that requires a warning
@@ -246,6 +249,8 @@ namespace HealthcheckDashboard
                                     var icon = ToolTipIcon.Info;
                                     DesktopNotifier.Notify(title, body, icon, 5000);
                                 }
+
+                                myTask.Messages.Add(localCondition?.ToString() ?? localTask.ToString());
                             }
 
                         }
@@ -256,6 +261,7 @@ namespace HealthcheckDashboard
                                 var original = Console.ForegroundColor;
                                 Console.ForegroundColor = ConsoleColor.Red;
                                 Console.WriteLine($"[{localTaskName}] Task execution error: {ex}");
+                                myTask.Messages.Add($"[{localTaskName}] Task execution error: {ex}");
                                 Console.ForegroundColor = original;
                             }
                         }

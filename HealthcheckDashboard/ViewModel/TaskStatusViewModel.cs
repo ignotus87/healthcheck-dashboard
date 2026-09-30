@@ -37,7 +37,6 @@ namespace HealthcheckDashboard
             {
                 existing.LastRunTime = updatedTask.LastRunTime;
                 existing.NextRunTime = updatedTask.NextRunTime;
-                existing.Message = updatedTask.Message;
             }
             else
             {

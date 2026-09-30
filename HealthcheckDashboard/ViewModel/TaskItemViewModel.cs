@@ -1,6 +1,9 @@
 ﻿using HealthcheckDashboard.ConditionNS;
 using HealthcheckDashboard.TaskNS;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Documents;
 
 namespace HealthcheckDashboard.ViewModel
 {
@@ -15,6 +18,7 @@ namespace HealthcheckDashboard.ViewModel
         public string Status => LastResult.HasValue ? (LastResult.Value == Condition.WarnWhen ? "Warning" : "OK") : "Unknown";
         public DateTime LastRunTime { get; set; } = DateTime.MinValue;
         public DateTime NextRunTime { get; set; } = DateTime.MinValue;
-        public string Message { get; set; }
+        public string Message => Messages.LastOrDefault();
+        public List<string> Messages { get; set; } = new List<string>();
     }
 }
