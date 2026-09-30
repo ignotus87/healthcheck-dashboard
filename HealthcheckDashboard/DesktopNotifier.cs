@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -35,6 +36,7 @@ namespace HealthcheckDashboard
         private static Thread _uiThread;
         private static volatile bool _initialized = false;
         private static NotifyIcon _notifyIcon;
+        private static List<(NotificationForm Form, DateTime ShownAt, int TimeoutMs)> _openForms = new();
 
         public static void Initialize()
         {
@@ -64,6 +66,29 @@ namespace HealthcheckDashboard
             _iconQueue.Add(new IconUpdateRequest { State = state });
         }
 
+        /// <summary>
+        /// Hides all open notification forms.
+        /// </summary>
+        public static void HideAllNotifications()
+        {
+            if (!_initialized) return;
+
+            lock (_openForms)
+            {
+                foreach (var entry in _openForms.ToList())
+                {
+                    try
+                    {
+                        entry.Form.Close();
+                    }
+                    catch
+                    {
+                        // swallow
+                    }
+                }
+            }
+        }
+
         private static void RunUi()
         {
             // Prepare WinForms UI thread
@@ -81,6 +106,8 @@ namespace HealthcheckDashboard
             var contextMenu = new ContextMenuStrip();
             var openMenuItem = new ToolStripMenuItem("Open Dashboard", null, (s, e) =>
             {
+                HideAllNotifications();
+
                 // Bring it to front if already open:
                 var statusWindow = TaskStatusWindow.GetInstance();
                 if (statusWindow.Visibility != System.Windows.Visibility.Visible)
@@ -123,70 +150,78 @@ namespace HealthcheckDashboard
                         }
                     }
 
-                    // Show all queued notifications
-                    while (_queue.TryTake(out var n))
+                    lock (_openForms)
                     {
-                        var form = new NotificationForm(n.Title, n.Text, MapIcon(n.Icon));
-                        // limit width to a reasonable value
-                        var wa = Screen.PrimaryScreen.WorkingArea;
-                        var maxWidth = Math.Min(420, wa.Width / 3);
-                        form.Size = new Size(maxWidth, form.PreferredHeight);
-
-                        // calculate stacked position (bottom-right, stack upwards)
-                        var x = wa.Right - form.Width - margin;
-                        var y = wa.Bottom - ((openForms.Count + 1) * (form.Height + margin));
-                        form.StartPosition = FormStartPosition.Manual;
-                        form.Location = new Point(x, y);
-
-                        form.FormClosed += (fs, fe) =>
+                        // Show all queued notifications
+                        while (_queue.TryTake(out var n))
                         {
-                            // reposition remaining forms
-                            var idx = openForms.FindIndex(t => t.Form == form);
-                            if (idx >= 0) openForms.RemoveAt(idx);
-                            for (int i = 0; i < openForms.Count; i++)
+                            var form = new NotificationForm(n.Title, n.Text, MapIcon(n.Icon));
+                            // limit width to a reasonable value
+                            var wa = Screen.PrimaryScreen.WorkingArea;
+                            var maxWidth = Math.Min(420, wa.Width / 3);
+                            form.Size = new Size(maxWidth, form.PreferredHeight);
+
+                            // calculate stacked position (bottom-right, stack upwards)
+                            var x = wa.Right - form.Width - margin;
+                            var y = wa.Bottom - ((_openForms.Count + 1) * (form.Height + margin));
+                            form.StartPosition = FormStartPosition.Manual;
+                            form.Location = new Point(x, y);
+
+                            form.FormClosed += (fs, fe) =>
                             {
-                                var f = openForms[i].Form;
-                                var newY = wa.Bottom - ((i + 1) * (f.Height + margin));
-                                f.Location = new Point(wa.Right - f.Width - margin, newY);
+                                // reposition remaining forms
+                                lock (_openForms)
+                                {
+                                    var idx = _openForms.FindIndex(t => t.Form == form);
+                                    if (idx >= 0) _openForms.RemoveAt(idx);
+                                    var wa2 = Screen.PrimaryScreen.WorkingArea;
+                                    const int margin2 = 8;
+                                    for (int i = 0; i < _openForms.Count; i++)
+                                    {
+                                        var f = _openForms[i].Form;
+                                        var newY = wa2.Bottom - ((i + 1) * (f.Height + margin2));
+                                        f.Location = new Point(wa2.Right - f.Width - margin2, newY);
+                                    }
+                                }
+                            };
+
+                            _openForms.Add((form, DateTime.UtcNow, n.TimeoutMs));
+                            form.Show();
+                        }
+
+                        // Close forms that have been open longer than their TimeoutMs
+                        if (_openForms.Count > 0)
+                        {
+                            var now = DateTime.UtcNow;
+                            var toClose = new List<NotificationForm>();
+                            foreach (var entry in _openForms)
+                            {
+                                if (entry.TimeoutMs > 0 && (now - entry.ShownAt).TotalMilliseconds >= entry.TimeoutMs)
+                                {
+                                    toClose.Add(entry.Form);
+                                }
                             }
-                        };
 
-                        openForms.Add((form, DateTime.UtcNow, n.TimeoutMs));
-                        form.Show();
-                    }
-
-                    // Close forms that have been open longer than their TimeoutMs
-                    if (openForms.Count > 0)
-                    {
-                        var now = DateTime.UtcNow;
-                        var toClose = new List<NotificationForm>();
-                        foreach (var entry in openForms)
-                        {
-                            if (entry.TimeoutMs > 0 && (now - entry.ShownAt).TotalMilliseconds >= entry.TimeoutMs)
+                            foreach (var f in toClose)
                             {
-                                toClose.Add(entry.Form);
+                                try
+                                {
+                                    // Closing triggers FormClosed handler which will remove and reposition remaining forms
+                                    f.Close();
+                                }
+                                catch
+                                {
+                                    // swallow
+                                }
                             }
                         }
 
-                        foreach (var f in toClose)
+                        // If queue was marked complete and empty, exit UI thread
+                        if (_queue.IsAddingCompleted && _queue.Count == 0 && _openForms.Count == 0)
                         {
-                            try
-                            {
-                                // Closing triggers FormClosed handler which will remove and reposition remaining forms
-                                f.Close();
-                            }
-                            catch
-                            {
-                                // swallow
-                            }
+                            timer.Stop();
+                            Application.ExitThread();
                         }
-                    }
-
-                    // If queue was marked complete and empty, exit UI thread
-                    if (_queue.IsAddingCompleted && _queue.Count == 0 && openForms.Count == 0)
-                    {
-                        timer.Stop();
-                        Application.ExitThread();
                     }
                 }
                 catch
@@ -378,6 +413,8 @@ namespace HealthcheckDashboard
 
             private void OpenTaskStatusWindow()
             {
+                HideAllNotifications();
+
                 var statusWindow = TaskStatusWindow.GetInstance();
                 if (statusWindow.Visibility != System.Windows.Visibility.Visible)
                 {
