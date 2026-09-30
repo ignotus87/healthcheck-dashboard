@@ -291,21 +291,21 @@ namespace HealthcheckDashboard
         {
             switch (taskType)
             {
-                case "GetFileLastModifiedDateTask":
+                case nameof(GetFileLastModifiedDateTask):
                     if (resource is GeneralFileResource gfr)
                         return new GetFileLastModifiedDateTask(taskName, gfr);
                     throw new ArgumentException("GetFileLastModifiedDateTask requires a GeneralFileResource");
-                case "MakeWebRequestTask":
+                case nameof(MakeWebRequestTask):
                     if (resource is UrlResource ur)
                         return new MakeWebRequestTask(taskName, ur);
                     throw new ArgumentException("MakeWebRequestTask requires a UrlResource");
-                case "SqlQueryDateTimeTask":
+                case nameof(SqlQueryDateTimeTask):
                     {
                         if (resource is ConnectionStringWithQueryResource csq)
                             return new SqlQueryDateTimeTask(taskName, csq);
                         throw new ArgumentException("SqlQueryDateTimeTask requires a ConnectionStringWithQueryResource resource");
                     }
-                case "SqlQueryIntTask":
+                case nameof(SqlQueryIntTask):
                     {
                         if (resource is ConnectionStringWithQueryResource csq)
                             return new SqlQueryIntTask(taskName, csq);
@@ -317,7 +317,7 @@ namespace HealthcheckDashboard
                             return new SqlGetUtcDateDiffTask(taskName, csr);
                         throw new ArgumentException($"{nameof(SqlGetUtcDateDiffTask)} requires a {nameof(ConnectionStringResource)} resource");
                     }
-                case "FindLinesInLatestFileContainingErrorTask":
+                case nameof(FindLinesInLatestFileContainingErrorTask):
                     if (resource is LatestFileResource lfr)
                     {
                         string[] textPartsIndicatingError = taskConfigJsonElement.TryGetProperty("textPartsIndicatingError", out var cfp) && cfp.ValueKind == JsonValueKind.Array
@@ -356,22 +356,22 @@ namespace HealthcheckDashboard
 
             switch (conditionType)
             {
-                case "DateTimeNotOlderThanTimeSpanCondition":
+                case nameof(DateTimeNotOlderThanTimeSpanCondition):
                     var notOlderSeconds = conditionElement.TryGetProperty("notOlderThanSeconds", out var s) ? s.GetInt32() : 60;
 
                     return new DateTimeNotOlderThanTimeSpanCondition(TimeSpan.FromSeconds(notOlderSeconds), warnWhen);
 
-                case "ContentIsDifferentCondition":
+                case nameof(ContentIsDifferentCondition):
                     var contentFilePath = conditionElement.TryGetProperty("contentFilePath", out var cfp) && cfp.ValueKind == JsonValueKind.String
                         ? cfp.GetString()
                         : null;
                     return new ContentIsDifferentCondition(contentFilePath, warnWhen);
 
-                case "SqlQueryResultIsOlderThanCondition":
+                case nameof(SqlQueryResultIsOlderThanCondition):
                     var limitSeconds = conditionElement.TryGetProperty("limitSeconds", out var l) ? l.GetInt32() : 60;
                     return new SqlQueryResultIsOlderThanCondition(TimeSpan.FromSeconds(limitSeconds), warnWhen);
 
-                case "SqlQueryIntResultIsGreaterThanCondition":
+                case nameof(SqlQueryIntResultIsGreaterThanCondition):
                     {
                         int valueInCondition = conditionElement.TryGetProperty("value", out var v) ? v.GetInt32() : 0;
                         return new SqlQueryIntResultIsGreaterThanCondition(valueInCondition, warnWhen);
@@ -389,7 +389,7 @@ namespace HealthcheckDashboard
                         return new IntIsGreaterThanCondition(valueInCondition, warnWhen);
                     }
 
-                case "StringNotNullCondition":
+                case nameof(StringNotNullCondition):
                     return new StringNotNullCondition(warnWhen);
 
                 default:
