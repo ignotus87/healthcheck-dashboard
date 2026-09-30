@@ -11,6 +11,7 @@ using HealthcheckDashboard.ScheduleNS;
 using HealthcheckDashboard.TaskNS;
 using System.Windows.Forms;
 using System.Linq;
+using HealthcheckDashboard.ViewModel;
 
 namespace HealthcheckDashboard
 {
@@ -21,6 +22,8 @@ namespace HealthcheckDashboard
 
         // store last condition evaluation per configured task (key = task instance id)
         private static readonly ConcurrentDictionary<int, bool?> LastConditionResults = new ConcurrentDictionary<int, bool?>();
+
+        public static List<TaskItemViewModel> TaskItems { get; } = new List<TaskItemViewModel>();
 
         static async Task Main(string[] args)
         {
@@ -115,10 +118,18 @@ namespace HealthcheckDashboard
                     // capture locals for closure
                     var localTaskName = taskName;
                     var localTask = task;
+
                     var localResource = resource;
                     var localCondition = condition;
                     bool? conditionResult = null;
                     string message;
+
+                    TaskItems.Add(new TaskItemViewModel
+                    {
+                        Task = task,
+                        Resource = resource,
+                        Condition = condition
+                    });
 
                     // Start background runner for this configured task (runs immediately once, then according to schedule)
                     var bgTask = RunInBackground(schedule.TimeSpan, async () =>
@@ -126,6 +137,10 @@ namespace HealthcheckDashboard
                         // run the configured task and evaluate condition if provided
                         try
                         {
+                            var myTask = TaskItems.Single(x => x.Task.Name == localTask.Name);
+                            myTask.LastRunTime = DateTime.Now;
+                            myTask.NextRunTime = DateTime.Now.Add(schedule.TimeSpan);
+
                             await localTask.PerformAsync();
 
                             bool foundTask = false;
@@ -164,6 +179,7 @@ namespace HealthcheckDashboard
                                 foundTask = true;
                                 var value = findErrorTask.LineWithError;
                                 conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+
                             }
 
                             if (foundTask)
@@ -187,6 +203,7 @@ namespace HealthcheckDashboard
 
                             // update stored last result
                             LastConditionResults[myId] = conditionResult;
+                            myTask.LastResult = conditionResult;
 
                             // write message; color red if result is false OR if a warning is required.
                             lock (ConsoleLock)
@@ -227,7 +244,7 @@ namespace HealthcheckDashboard
                                     var title = $"OK: {localTaskName}";
                                     var body = (localTask.ToString() ?? "") + "|" + localCondition != null ? localCondition.ToString() : "Condition triggered";
                                     var icon = ToolTipIcon.Info;
-                                    DesktopNotifier.Notify(title, body, icon, 10000);
+                                    DesktopNotifier.Notify(title, body, icon, 5000);
                                 }
                             }
 

@@ -1,6 +1,6 @@
 ﻿namespace HealthcheckDashboard.ResourceNS
 {
-    enum ResourceType
+    public enum ResourceType
     {
         GeneralFile,
         TextFile,
@@ -12,7 +12,7 @@
         ConnectionStringWithQuery,
         LatestFile
     }
-    class Resource
+    public class Resource
     {
         private ResourceType _resourceType;
 

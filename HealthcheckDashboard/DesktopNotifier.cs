@@ -79,6 +79,12 @@ namespace HealthcheckDashboard
 
             // Create context menu
             var contextMenu = new ContextMenuStrip();
+            var openMenuItem = new ToolStripMenuItem("Open Dashboard", null, (s, e) =>
+            {
+                TaskStatusWindow statusWindow = new TaskStatusWindow();
+                statusWindow.Show();
+            });
+            contextMenu.Items.Add(openMenuItem);
             var exitMenuItem = new ToolStripMenuItem("Exit", null, (s, e) =>
             {
                 _notifyIcon.Visible = false;

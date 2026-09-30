@@ -3,6 +3,7 @@
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<OutputType>WinExe</OutputType>
 		<UseWindowsForms>true</UseWindowsForms>
+		<UseWPF>true</UseWPF>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Include=".github\copilot-instructions.md" />
@@ -13,7 +14,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="tasks.json">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="tasks.example.json">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

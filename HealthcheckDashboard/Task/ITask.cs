@@ -1,6 +1,6 @@
 ﻿namespace HealthcheckDashboard.TaskNS
 {
-    interface ITask
+    public interface ITask
     {
         public string Name { get; }
         public bool IsEnabled { get; }
