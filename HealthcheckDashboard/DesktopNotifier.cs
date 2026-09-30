@@ -18,9 +18,23 @@ namespace HealthcheckDashboard
             public int TimeoutMs;
         }
 
+        private class IconUpdateRequest
+        {
+            public TaskState State;
+        }
+
+        public enum TaskState
+        {
+            Unvalidated,  // Yellow ?
+            Success,      // Green checkmark
+            Error         // Red X
+        }
+
         private static readonly BlockingCollection<Notification> _queue = new BlockingCollection<Notification>();
+        private static readonly BlockingCollection<IconUpdateRequest> _iconQueue = new BlockingCollection<IconUpdateRequest>();
         private static Thread _uiThread;
         private static volatile bool _initialized = false;
+        private static NotifyIcon _notifyIcon;
 
         public static void Initialize()
         {
@@ -41,15 +55,24 @@ namespace HealthcheckDashboard
             _queue.Add(new Notification { Title = title, Text = text, Icon = icon, TimeoutMs = timeoutMs });
         }
 
+        /// <summary>
+        /// Updates the taskbar icon based on task state.
+        /// </summary>
+        public static void UpdateTaskbarIcon(TaskState state)
+        {
+            if (!_initialized) Initialize();
+            _iconQueue.Add(new IconUpdateRequest { State = state });
+        }
+
         private static void RunUi()
         {
             // Prepare WinForms UI thread
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            using var notifyIcon = new NotifyIcon
+            _notifyIcon = new NotifyIcon
             {
-                Icon = SystemIcons.Application,
+                Icon = CreateIconForState(TaskState.Unvalidated),
                 Visible = true,
                 Text = "Healthcheck Dashboard"
             };
@@ -58,11 +81,11 @@ namespace HealthcheckDashboard
             var contextMenu = new ContextMenuStrip();
             var exitMenuItem = new ToolStripMenuItem("Exit", null, (s, e) =>
             {
-                notifyIcon.Visible = false;
+                _notifyIcon.Visible = false;
                 Environment.Exit(0);
             });
             contextMenu.Items.Add(exitMenuItem);
-            notifyIcon.ContextMenuStrip = contextMenu;
+            _notifyIcon.ContextMenuStrip = contextMenu;
 
             // List of visible notification windows (managed on UI thread)
             var openForms = new List<(NotificationForm Form, DateTime ShownAt, int TimeoutMs)>();
@@ -75,6 +98,17 @@ namespace HealthcheckDashboard
             {
                 try
                 {
+                    // Process icon update requests
+                    while (_iconQueue.TryTake(out var iconReq))
+                    {
+                        if (_notifyIcon != null)
+                        {
+                            var oldIcon = _notifyIcon.Icon;
+                            _notifyIcon.Icon = CreateIconForState(iconReq.State);
+                            oldIcon?.Dispose();
+                        }
+                    }
+
                     // Show all queued notifications
                     while (_queue.TryTake(out var n))
                     {
@@ -155,8 +189,74 @@ namespace HealthcheckDashboard
             }
             finally
             {
-                notifyIcon.Visible = false;
+                _notifyIcon.Visible = false;
+                _notifyIcon?.Dispose();
             }
+        }
+
+        private static Icon CreateIconForState(TaskState state)
+        {
+            const int size = 16;
+            var bitmap = new Bitmap(size, size);
+
+            using (var g = Graphics.FromImage(bitmap))
+            {
+                g.Clear(Color.Transparent);
+
+                switch (state)
+                {
+                    case TaskState.Error:
+                        // Red background with white X
+                        using (var redBrush = new SolidBrush(Color.Red))
+                        {
+                            g.FillEllipse(redBrush, 0, 0, size, size);
+                        }
+                        using (var whitePen = new Pen(Color.White, 2))
+                        {
+                            g.DrawLine(whitePen, 3, 3, size - 3, size - 3);
+                            g.DrawLine(whitePen, size - 3, 3, 3, size - 3);
+                        }
+                        break;
+
+                    case TaskState.Success:
+                        // Green background with white checkmark
+                        using (var greenBrush = new SolidBrush(Color.Green))
+                        {
+                            g.FillEllipse(greenBrush, 0, 0, size, size);
+                        }
+                        using (var whitePen = new Pen(Color.White, 2))
+                        {
+                            // Draw checkmark
+                            var points = new Point[]
+                            {
+                                new Point(4, 8),
+                                new Point(7, 12),
+                                new Point(13, 4)
+                            };
+                            g.DrawLines(whitePen, points);
+                        }
+                        break;
+
+                    case TaskState.Unvalidated:
+                    default:
+                        // Yellow background with question mark
+                        using (var yellowBrush = new SolidBrush(Color.Gold))
+                        {
+                            g.FillEllipse(yellowBrush, 0, 0, size, size);
+                        }
+                        using (var font = new Font("Arial", 10, FontStyle.Bold))
+                        using (var blackBrush = new SolidBrush(Color.Black))
+                        {
+                            var textSize = g.MeasureString("?", font);
+                            var x = (size - textSize.Width) / 2;
+                            var y = (size - textSize.Height) / 2 - 1;
+                            g.DrawString("?", font, blackBrush, x, y);
+                        }
+                        break;
+                }
+            }
+
+            return Icon.FromHandle(bitmap.GetHicon());
         }
 
         private static Icon MapIcon(ToolTipIcon t)
@@ -176,6 +276,7 @@ namespace HealthcheckDashboard
             try
             {
                 _queue.CompleteAdding();
+                _iconQueue.CompleteAdding();
                 if (_uiThread != null && !_uiThread.Join(2000))
                 {
                     _uiThread.Interrupt();

@@ -169,6 +169,7 @@ namespace HealthcheckDashboard
                             if (foundTask)
                             {
                                 message = Environment.NewLine + $"[{localTaskName}] Performed Task: {localTask}\n=> {localCondition}";
+
                             }
                             else
                             {
@@ -193,6 +194,7 @@ namespace HealthcheckDashboard
                                 var original = Console.ForegroundColor;
                                 var shouldColorRed = (localCondition != null && conditionResult.HasValue && conditionResult.Value == localCondition.WarnWhen);
                                 Console.ForegroundColor = shouldColorRed ? ConsoleColor.Red : ConsoleColor.Green;
+                                DesktopNotifier.UpdateTaskbarIcon(shouldColorRed ? DesktopNotifier.TaskState.Error : DesktopNotifier.TaskState.Success);
 
                                 // atomic write
                                 Console.WriteLine(message);
