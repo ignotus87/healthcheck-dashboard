@@ -58,13 +58,9 @@
 
         <!-- Footer Buttons -->
         <StackPanel Grid.Row="2" Margin="20,0,20,15" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Refresh" Padding="15,8" Margin="0,0,10,0"
-                    Background="#007ACC" Foreground="White"
-                    Click="RefreshButton_Click"
-                    Cursor="Hand"/>
-            <Button Content="Clear All" Padding="15,8"
+            <Button Content="Close" Padding="15,8"
                     Background="#DC3545" Foreground="White"
-                    Click="ClearButton_Click"
+                    Click="Button_Click"
                     Cursor="Hand"/>
         </StackPanel>
     </Grid>

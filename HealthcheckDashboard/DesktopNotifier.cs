@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
-using System.Drawing;
 
 namespace HealthcheckDashboard
 {
@@ -81,8 +81,16 @@ namespace HealthcheckDashboard
             var contextMenu = new ContextMenuStrip();
             var openMenuItem = new ToolStripMenuItem("Open Dashboard", null, (s, e) =>
             {
-                TaskStatusWindow statusWindow = new TaskStatusWindow();
-                statusWindow.Show();
+                // Bring it to front if already open:
+                var statusWindow = TaskStatusWindow.GetInstance();
+                if (statusWindow.Visibility != System.Windows.Visibility.Visible)
+                {
+                    statusWindow.Show();
+                }
+                else
+                {
+                    statusWindow.Focus();
+                }
             });
             contextMenu.Items.Add(openMenuItem);
             var exitMenuItem = new ToolStripMenuItem("Exit", null, (s, e) =>

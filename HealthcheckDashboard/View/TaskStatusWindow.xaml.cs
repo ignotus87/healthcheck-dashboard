@@ -1,13 +1,31 @@
 ﻿using HealthcheckDashboard.ViewModel;
 using System;
-using System.Collections.ObjectModel;
 using System.Windows;
 
 namespace HealthcheckDashboard
 {
     public partial class TaskStatusWindow : Window
     {
+        private static TaskStatusWindow _instance;
+        private static readonly object _lock = new object();
         private TaskStatusViewModel _viewModel;
+
+        /// <summary>
+        /// Gets or creates a singleton instance of the TaskStatusWindow.
+        /// Only one window can exist at a time.
+        /// </summary>
+        public static TaskStatusWindow GetInstance()
+        {
+            lock (_lock)
+            {
+                // If no instance exists or the window was closed, create a new one
+                if (_instance == null || _instance.IsLoaded == false)
+                {
+                    _instance = new TaskStatusWindow();
+                }
+                return _instance;
+            }
+        }
 
         public TaskStatusWindow()
         {
@@ -19,7 +37,6 @@ namespace HealthcheckDashboard
         public void UpdateTaskStatus(TaskItemViewModel taskStatus)
         {
             _viewModel.UpdateTask(taskStatus);
-            //UpdateTimeLabel.Text = $"Last updated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
         }
 
         public void AddTask(TaskItemViewModel taskStatus)
@@ -32,14 +49,18 @@ namespace HealthcheckDashboard
             _viewModel.ClearTasks();
         }
 
-        private void RefreshButton_Click(object sender, RoutedEventArgs e)
-        {
-            //UpdateTimeLabel.Text = $"Last updated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
-        }
 
-        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Clear the instance when the window is closed
+        /// </summary>
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
-            ClearTasks();
+            base.OnClosed(e);
+            lock (_lock)
+            {
+                _instance = null;
+                this.Close();
+            }
         }
     }
 }
