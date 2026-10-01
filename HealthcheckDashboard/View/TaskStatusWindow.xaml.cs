@@ -100,12 +100,18 @@ namespace HealthcheckDashboard
         /// </summary>
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            this.Close();
+        }
+
+        /// <summary>
+        /// Handle the Window.Closed event to cleanup resources
+        /// </summary>
+        private void TaskStatusWindow_Closed(object sender, EventArgs e)
+        {
             _refreshTimer?.Stop();
-            base.OnClosed(e);
             lock (_lock)
             {
                 _instance = null;
-                this.Close();
             }
         }
     }
