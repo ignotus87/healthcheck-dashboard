@@ -29,6 +29,8 @@ namespace HealthcheckDashboard
 
         static async Task Main(string[] args)
         {
+            bool initializationSuccess = false;
+
             try
             {
                 ConsoleHelper.EnsureConsole();
@@ -41,19 +43,36 @@ namespace HealthcheckDashboard
                 await Console.Out.WriteLineAsync("*** Hiding the console window after 5 seconds ***");
                 _ = Task.Delay(5000).ContinueWith(_ => ConsoleHelper.HideConsole());
 
-                await ConfigureAndRun();
+                try
+                {
+                    initializationSuccess = await ConfigureAndRun();
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    if (!initializationSuccess)
+                    {
+                        await Console.Out.WriteLineAsync("Preass any key to exit");
+                        Console.ReadKey();
+                    }
 
-                await Console.Out.WriteLineAsync("FINISHED");
-                DesktopNotifier.Shutdown();
+                    await Console.Out.WriteLineAsync("FINISHED");
+                    DesktopNotifier.Shutdown();
+                }
+
+                
             }
             finally
             {
+                await Console.Out.WriteLineAsync("*** Closing the app after 5 seconds ***");
                 _trayIconManager?.Dispose();
                 ConsoleHelper.ReleaseConsole();
             }
         }
 
-        public static async Task ConfigureAndRun()
+        public static async Task<bool> ConfigureAndRun()
         {
             await Console.Out.WriteLineAsync("CONFIGURE");
 
@@ -62,7 +81,7 @@ namespace HealthcheckDashboard
             if (!File.Exists(configPath))
             {
                 await Console.Error.WriteLineAsync($"Configuration file not found: {configPath}");
-                return;
+                return false;
             }
 
             JsonDocument doc;
@@ -73,13 +92,13 @@ namespace HealthcheckDashboard
             catch (Exception ex)
             {
                 await Console.Error.WriteLineAsync($"Failed to parse configuration: {ex.Message}");
-                return;
+                return false;
             }
 
             if (!doc.RootElement.TryGetProperty("tasks", out var tasksElement) || tasksElement.ValueKind != JsonValueKind.Array)
             {
                 await Console.Error.WriteLineAsync("Configuration does not contain a 'tasks' array.");
-                return;
+                return false;
             }
 
             var backgroundTasks = new List<Task>();
@@ -173,6 +192,7 @@ namespace HealthcheckDashboard
 
             // Wait for all background runners (they are long-running)
             await Task.WhenAll(backgroundTasks);
+            return true;
         }
 
         public static async Task ExecuteTaskNow(TaskItemViewModel taskItem, int taskInstanceId)
