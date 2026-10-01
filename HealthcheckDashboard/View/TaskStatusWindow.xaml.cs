@@ -1,6 +1,7 @@
 ﻿using HealthcheckDashboard.ViewModel;
 using System;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace HealthcheckDashboard
 {
@@ -9,6 +10,7 @@ namespace HealthcheckDashboard
         private static TaskStatusWindow _instance;
         private static readonly object _lock = new object();
         private TaskStatusViewModel _viewModel;
+        private DispatcherTimer _refreshTimer;
 
         /// <summary>
         /// Gets or creates a singleton instance of the TaskStatusWindow.
@@ -32,6 +34,34 @@ namespace HealthcheckDashboard
             InitializeComponent();
             _viewModel = new TaskStatusViewModel();
             this.DataContext = _viewModel;
+
+            // Initialize the refresh timer
+            InitializeRefreshTimer();
+
+            // Wire up the Loaded event to start the timer
+            this.Loaded += TaskStatusWindow_Loaded;
+        }
+
+        private void InitializeRefreshTimer()
+        {
+            _refreshTimer = new DispatcherTimer();
+            _refreshTimer.Interval = TimeSpan.FromSeconds(10);
+            _refreshTimer.Tick += RefreshTimer_Tick;
+        }
+
+        private void TaskStatusWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Start the refresh timer when the window is loaded
+            _refreshTimer?.Start();
+        }
+
+        private void RefreshTimer_Tick(object sender, EventArgs e)
+        {
+            // Refresh the view model with current task data
+            _viewModel.RefreshTasks();
+
+            // Update the last update time label
+            UpdateTimeLabel.Text = $"Last updated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
         }
 
         public void UpdateTaskStatus(TaskItemViewModel taskStatus)
@@ -70,6 +100,7 @@ namespace HealthcheckDashboard
         /// </summary>
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            _refreshTimer?.Stop();
             base.OnClosed(e);
             lock (_lock)
             {

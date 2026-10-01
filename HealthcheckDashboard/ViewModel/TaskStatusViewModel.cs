@@ -55,5 +55,13 @@ namespace HealthcheckDashboard
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
+
+        internal void RefreshTasks()
+        {
+            foreach (var task in Tasks)
+            {
+                task.RefreshBindings();
+            }
+        }
     }
 }
