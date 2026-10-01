@@ -139,120 +139,9 @@ namespace HealthcheckDashboard
                         // run the configured task and evaluate condition if provided
                         try
                         {
-
-                            myTask.LastRunTime = DateTime.Now;
                             myTask.NextRunTime = DateTime.Now.Add(schedule.TimeSpan);
 
-                            await localTask.PerformAsync();
-
-                            bool foundTask = false;
-
-                            if (localTask is GetFileLastModifiedDateTask gf)
-                            {
-                                foundTask = true;
-                                var value = gf.LastModifiedDate;
-                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
-                            }
-                            else if (localTask is MakeWebRequestTask requestTask)
-                            {
-                                foundTask = true;
-                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(requestTask.LastResult) : false;
-                            }
-                            else if (localTask is SqlQueryDateTimeTask sqlTask)
-                            {
-                                foundTask = true;
-                                var value = sqlTask.LastResult;
-                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
-                            }
-                            else if (localTask is SqlGetUtcDateDiffTask sqlGetUtcDateDiffTask)
-                            {
-                                foundTask = true;
-                                var value = (int)Math.Abs(sqlGetUtcDateDiffTask.LastResult.TotalMilliseconds);
-                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
-                            }
-                            else if (localTask is SqlQueryIntTask sqlIntTask)
-                            {
-                                foundTask = true;
-                                var value = sqlIntTask.LastResult;
-                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
-                            }
-                            else if (localTask is FindLinesInLatestFileContainingErrorTask findErrorTask)
-                            {
-                                foundTask = true;
-                                var value = findErrorTask.LineWithError;
-                                conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
-
-                            }
-
-                            if (foundTask)
-                            {
-                                message = Environment.NewLine + $"[{localTaskName}] Performed Task: {localTask}\n=> {localCondition}";
-                                myTask.Messages.Add(message);
-                            }
-                            else
-                            {
-                                // generic fallback
-                                message = "Fell back to the generic fallback implementation." + $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}";
-                                myTask.Messages.Add(message);
-                            }
-
-                            // determine whether a transition occurred that requires a warning
-                            var prevOpt = LastConditionResults.TryGetValue(myId, out var prev) ? prev : null;
-                            var hasValueChanged = false;
-                            if (localCondition != null && prevOpt.HasValue && conditionResult.HasValue)
-                            {
-                                hasValueChanged = prevOpt.Value != conditionResult.Value;
-                            }
-
-                            // update stored last result
-                            LastConditionResults[myId] = conditionResult;
-                            myTask.LastResult = conditionResult;
-
-                            // write message; color red if result is false OR if a warning is required.
-                            lock (ConsoleLock)
-                            {
-                                var original = Console.ForegroundColor;
-                                var shouldColorRed = (localCondition != null && conditionResult.HasValue && conditionResult.Value == localCondition.WarnWhen);
-                                Console.ForegroundColor = shouldColorRed ? ConsoleColor.Red : ConsoleColor.Green;
-                                DesktopNotifier.UpdateTaskbarIcon(shouldColorRed ? DesktopNotifier.TaskState.Error : DesktopNotifier.TaskState.Success);
-
-                                // atomic write
-                                Console.WriteLine(message);
-
-                                if (hasValueChanged)
-                                {
-                                    Console.WriteLine("Info: Value changed");
-                                }
-
-                                Console.ForegroundColor = original;
-
-                                // Show desktop notification if result is red or a warning transition occurred
-                                if (shouldColorRed)
-                                {
-                                    try
-                                    {
-                                        var title = $"Healthcheck: {localTaskName}";
-                                        var body = (localTask.ToString() ?? "") + "|" + localCondition != null ? localCondition.ToString() : "Condition triggered";
-                                        var icon = shouldColorRed ? (hasValueChanged ? ToolTipIcon.Warning : ToolTipIcon.Error) : ToolTipIcon.Info;
-                                        DesktopNotifier.Notify(title, body, icon, 60000);
-                                    }
-                                    catch
-                                    {
-                                        // Do not fail the background runner on notification failure
-                                    }
-                                }
-                                else
-                                {
-                                    // Show green notification and close it 10 seconds later
-                                    var title = $"OK: {localTaskName}";
-                                    var body = (localTask.ToString() ?? "") + "|" + localCondition != null ? localCondition.ToString() : "Condition triggered";
-                                    var icon = ToolTipIcon.Info;
-                                    DesktopNotifier.Notify(title, body, icon, 5000);
-                                }
-
-                                myTask.Messages.Add(localCondition?.ToString() ?? localTask.ToString());
-                            }
-
+                            await ExecuteTaskNow(myTask, myId);
                         }
                         catch (Exception ex)
                         {
@@ -278,6 +167,143 @@ namespace HealthcheckDashboard
 
             // Wait for all background runners (they are long-running)
             await Task.WhenAll(backgroundTasks);
+        }
+
+        public static async Task ExecuteTaskNow(TaskItemViewModel taskItem, int taskInstanceId)
+        {
+            if (taskItem?.Task == null) return;
+
+            var localTask = taskItem.Task;
+            var localTaskName = taskItem.Task.Name;
+            var localCondition = taskItem.Condition;
+            var localResource = taskItem.Resource;
+            bool? conditionResult = null;
+            string message;
+
+            try
+            {
+                taskItem.LastRunTime = DateTime.Now;
+
+                await localTask.PerformAsync();
+
+                bool foundTask = false;
+
+                if (localTask is GetFileLastModifiedDateTask gf)
+                {
+                    foundTask = true;
+                    var value = gf.LastModifiedDate;
+                    conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                }
+                else if (localTask is MakeWebRequestTask requestTask)
+                {
+                    foundTask = true;
+                    conditionResult = localCondition != null ? localCondition.EvaluateCondition(requestTask.LastResult) : false;
+                }
+                else if (localTask is SqlQueryDateTimeTask sqlTask)
+                {
+                    foundTask = true;
+                    var value = sqlTask.LastResult;
+                    conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                }
+                else if (localTask is SqlGetUtcDateDiffTask sqlGetUtcDateDiffTask)
+                {
+                    foundTask = true;
+                    var value = (int)Math.Abs(sqlGetUtcDateDiffTask.LastResult.TotalMilliseconds);
+                    conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                }
+                else if (localTask is SqlQueryIntTask sqlIntTask)
+                {
+                    foundTask = true;
+                    var value = sqlIntTask.LastResult;
+                    conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                }
+                else if (localTask is FindLinesInLatestFileContainingErrorTask findErrorTask)
+                {
+                    foundTask = true;
+                    var value = findErrorTask.LineWithError;
+                    conditionResult = localCondition != null ? localCondition.EvaluateCondition(value) : false;
+                }
+
+                if (foundTask)
+                {
+                    message = Environment.NewLine + $"[{localTaskName}] Performed Task: {localTask}\n=> {localCondition}";
+                    taskItem.Messages.Add(message);
+                }
+                else
+                {
+                    // generic fallback
+                    message = "Fell back to the generic fallback implementation." + $"[{localTaskName}] Performed Task: {localTask}\nResource: {localResource}";
+                    taskItem.Messages.Add(message);
+                }
+
+                // determine whether a transition occurred that requires a warning
+                var prevOpt = LastConditionResults.TryGetValue(taskInstanceId, out var prev) ? prev : null;
+                var hasValueChanged = false;
+                if (localCondition != null && prevOpt.HasValue && conditionResult.HasValue)
+                {
+                    hasValueChanged = prevOpt.Value != conditionResult.Value;
+                }
+
+                // update stored last result
+                LastConditionResults[taskInstanceId] = conditionResult;
+                taskItem.LastResult = conditionResult;
+
+                // write message; color red if result is false OR if a warning is required.
+                lock (ConsoleLock)
+                {
+                    var original = Console.ForegroundColor;
+                    var shouldColorRed = (localCondition != null && conditionResult.HasValue && conditionResult.Value == localCondition.WarnWhen);
+                    Console.ForegroundColor = shouldColorRed ? ConsoleColor.Red : ConsoleColor.Green;
+                    DesktopNotifier.UpdateTaskbarIcon(shouldColorRed ? DesktopNotifier.TaskState.Error : DesktopNotifier.TaskState.Success);
+
+                    // atomic write
+                    Console.WriteLine(message);
+
+                    if (hasValueChanged)
+                    {
+                        Console.WriteLine("Info: Value changed");
+                    }
+
+                    Console.ForegroundColor = original;
+
+                    // Show desktop notification if result is red or a warning transition occurred
+                    if (shouldColorRed)
+                    {
+                        try
+                        {
+                            var title = $"Healthcheck: {localTaskName}";
+                            var body = (localTask.ToString() ?? "") + "|" + (localCondition != null ? localCondition.ToString() : "Condition triggered");
+                            var icon = shouldColorRed ? (hasValueChanged ? ToolTipIcon.Warning : ToolTipIcon.Error) : ToolTipIcon.Info;
+                            DesktopNotifier.Notify(title, body, icon, 60000);
+                        }
+                        catch
+                        {
+                            // Do not fail on notification failure
+                        }
+                    }
+                    else
+                    {
+                        // Show green notification and close it 10 seconds later
+                        var title = $"OK: {localTaskName}";
+                        var body = (localTask.ToString() ?? "") + "|" + (localCondition != null ? localCondition.ToString() : "Condition triggered");
+                        var icon = ToolTipIcon.Info;
+                        DesktopNotifier.Notify(title, body, icon, 5000);
+                    }
+
+                    taskItem.Messages.Add(localCondition?.ToString() ?? localTask.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                lock (ConsoleLock)
+                {
+                    var original = Console.ForegroundColor;
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"[{localTaskName}] Task execution error: {ex}");
+                    taskItem.Messages.Add($"[{localTaskName}] Task execution error: {ex}");
+                    Console.ForegroundColor = original;
+                }
+            }
         }
 
         // Minimal factory helpers - extend as you add more ITask/IResource/ICondition types

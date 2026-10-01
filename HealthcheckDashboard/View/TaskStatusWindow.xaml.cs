@@ -49,6 +49,21 @@ namespace HealthcheckDashboard
             _viewModel.ClearTasks();
         }
 
+        /// <summary>
+        /// Execute the selected task immediately with full property updates
+        /// </summary>
+        private async void ExecuteNow_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedTask = TaskStatusDataGrid.SelectedItem as TaskItemViewModel;
+            if (selectedTask == null) return;
+
+            // Find the task instance ID from TaskItems
+            var taskIndex = Program.TaskItems.FindIndex(t => t.Task.Name == selectedTask.Task.Name);
+            if (taskIndex < 0) return;
+
+            // Execute task with full property updates (same as background runner)
+            await Program.ExecuteTaskNow(selectedTask, taskIndex);
+        }
 
         /// <summary>
         /// Clear the instance when the window is closed
