@@ -68,6 +68,9 @@ namespace HealthcheckDashboard
 
             // Update the last update time label
             UpdateTimeLabel.Text = $"Last updated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+
+            // Refresh the console button caption
+            UpdateConsoleButtonText();
         }
 
         public void UpdateTaskStatus(TaskItemViewModel taskStatus)
