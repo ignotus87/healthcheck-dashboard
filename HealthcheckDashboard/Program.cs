@@ -32,11 +32,14 @@ namespace HealthcheckDashboard
             try
             {
                 ConsoleHelper.EnsureConsole();
-                ConsoleHelper.HideConsole(); // Hide console on startup
                 DesktopNotifier.Initialize();
 
                 // Initialize tray icon
                 _trayIconManager = new TrayIconManager();
+
+                // Hide console after 5 seconds
+                await Console.Out.WriteLineAsync("*** Hiding the console window after 5 seconds ***");
+                _ = Task.Delay(5000).ContinueWith(_ => ConsoleHelper.HideConsole());
 
                 await ConfigureAndRun();
 
