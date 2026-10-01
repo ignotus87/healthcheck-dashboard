@@ -32,6 +32,7 @@ namespace HealthcheckDashboard
             try
             {
                 ConsoleHelper.EnsureConsole();
+                ConsoleHelper.HideConsole(); // Hide console on startup
                 DesktopNotifier.Initialize();
 
                 // Initialize tray icon

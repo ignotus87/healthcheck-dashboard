@@ -66,6 +66,11 @@
 
         <!-- Footer Buttons -->
         <StackPanel Grid.Row="2" Margin="20,0,20,15" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="ToggleConsoleButton" Content="Show Console" Padding="15,8"
+                    Background="#007BFF" Foreground="White"
+                    Click="ToggleConsole_Click"
+                    Cursor="Hand"
+                    Margin="5 0 10 0"/>
             <Button Content="Close" Padding="15,8"
                     Background="#DC3545" Foreground="White"
                     Click="Button_Click"

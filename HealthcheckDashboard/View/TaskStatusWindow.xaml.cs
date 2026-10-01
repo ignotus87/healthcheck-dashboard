@@ -41,7 +41,7 @@ namespace HealthcheckDashboard
             // Wire up the Loaded event to start the timer
             this.Loaded += TaskStatusWindow_Loaded;
 
-            // Minimize to ray
+            // Minimize to tray
             this.StateChanged += TaskStatusWindow_StateChanged;
         }
 
@@ -56,6 +56,9 @@ namespace HealthcheckDashboard
         {
             // Start the refresh timer when the window is loaded
             _refreshTimer?.Start();
+
+            // Update console button text based on current visibility
+            UpdateConsoleButtonText();
         }
 
         private void RefreshTimer_Tick(object sender, EventArgs e)
@@ -96,6 +99,28 @@ namespace HealthcheckDashboard
 
             // Execute task with full property updates (same as background runner)
             await Program.ExecuteTaskNow(selectedTask, taskIndex);
+        }
+
+        /// <summary>
+        /// Toggle console visibility
+        /// </summary>
+        private void ToggleConsole_Click(object sender, RoutedEventArgs e)
+        {
+            if (ConsoleHelper.IsConsoleVisible())
+            {
+                ConsoleHelper.HideConsole();
+            }
+            else
+            {
+                ConsoleHelper.ShowConsole();
+            }
+
+            UpdateConsoleButtonText();
+        }
+
+        private void UpdateConsoleButtonText()
+        {
+            ToggleConsoleButton.Content = ConsoleHelper.IsConsoleVisible() ? "Hide Console" : "Show Console";
         }
 
         /// <summary>
