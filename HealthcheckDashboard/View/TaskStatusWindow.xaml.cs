@@ -40,6 +40,9 @@ namespace HealthcheckDashboard
 
             // Wire up the Loaded event to start the timer
             this.Loaded += TaskStatusWindow_Loaded;
+
+            // Minimize to ray
+            this.StateChanged += TaskStatusWindow_StateChanged;
         }
 
         private void InitializeRefreshTimer()
@@ -112,6 +115,14 @@ namespace HealthcheckDashboard
             lock (_lock)
             {
                 _instance = null;
+            }
+        }
+
+        private void TaskStatusWindow_StateChanged(object sender, EventArgs e)
+        {
+            if (this.WindowState == WindowState.Minimized)
+            {
+                this.Hide();
             }
         }
     }

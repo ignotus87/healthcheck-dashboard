@@ -17,6 +17,8 @@ namespace HealthcheckDashboard
 {
     class Program
     {
+        private static TrayIconManager _trayIconManager;
+
         // ensure console color changes are atomic across threads
         private static readonly object ConsoleLock = new object();
 
@@ -30,19 +32,19 @@ namespace HealthcheckDashboard
             try
             {
                 ConsoleHelper.EnsureConsole();
-
-                // start notifier early (harmless if already started)
                 DesktopNotifier.Initialize();
+
+                // Initialize tray icon
+                _trayIconManager = new TrayIconManager();
 
                 await ConfigureAndRun();
 
                 await Console.Out.WriteLineAsync("FINISHED");
-
-                // allow notifier to finish any queued notifications before exit
                 DesktopNotifier.Shutdown();
             }
             finally
             {
+                _trayIconManager?.Dispose();
                 ConsoleHelper.ReleaseConsole();
             }
         }
